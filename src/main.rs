@@ -1,52 +1,110 @@
-use std::{f64::consts::{PI, TAU}, thread};
+use std::{error::Error, f32::consts::{PI, TAU}, thread, time::Duration};
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use rodio::{OutputStream, Source};
 
-fn lerp(a: f64, b: f64, t: f64) -> f64 {
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + t * (b - a)
 }
 
-struct WaveTable {    
-    table: Vec<f64>,
-    samples: usize,
-    inverse_step: f64,
+struct WaveTable {
+    table: Vec<f32>,
+    inverse_step: f32,
 }
 
 impl WaveTable {
-    pub fn new<F>(function: F, samples: usize) -> Self 
-        where F: Fn(f64) -> f64,
+    pub fn new<F>(function: F, length: usize) -> Self
+        where F: Fn(f32) -> f32,
     {
-        let mut lookup_table = Vec::with_capacity(samples);
-        
-        let step = TAU / (samples as f64);
-        for i in 0..samples {
-            lookup_table.push(function((i as f64) * step));
+        let mut table = Vec::with_capacity(length);
+
+        let step = TAU / (length as f32);
+        for i in 0..length {
+            table.push(function((i as f32) * step));
         }
-        
 
         Self {
-            table: lookup_table,
-            samples,
+            table,
             inverse_step: 1.0/step,
         }
     }
 
-    pub fn lookup(&self, phase: f64) -> f64 {
+    pub fn lookup(&self, phase: f32) -> f32 {
         let phase = phase % TAU;
         let index = phase * self.inverse_step;
 
-        let index_floor = index.floor().clamp(0.0, (self.samples-2) as f64);
-        let index_floor_usize = (index_floor as usize).clamp(0, self.samples-2);
+        let index_floor = index.floor().clamp(0.0, (self.table.len()-2) as f32);
+        let index_floor_usize = (index_floor as usize).clamp(0, self.table.len()-2);
 
         lerp(self.table[index_floor_usize], self.table[index_floor_usize+1], index-index_floor)
     }
+    
+    pub fn len(&self) -> usize {
+        self.table.len()
+    }
 }
 
-fn sine(x: f64) -> f64 {
+struct WaveTableOscillator {
+    sample_rate: u32,
+    wave_table: WaveTable,
+    index: f32,
+    index_increment: f32,
+}
+
+impl WaveTableOscillator {
+    pub fn new(sample_rate: u32, wave_table: WaveTable) -> Self 
+    {       
+        Self {
+            sample_rate,
+            wave_table,
+            index: 0.0,
+            index_increment: 0.0,
+        }
+    }
+
+    pub fn set_frequency(&mut self, frequency: f32) {
+        self.index_increment = (frequency * self.wave_table.len() as f32) / (self.sample_rate as f32);
+    }
+
+    pub fn get_sample(&mut self) -> f32 {
+        let sample = self.wave_table.lookup(self.index);
+        self.index += self.index_increment;
+        self.index %= TAU;
+        sample
+    }
+}
+
+impl Iterator for WaveTableOscillator {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        return Some(self.get_sample())
+    }
+}
+
+impl Source for WaveTableOscillator {
+    fn channels(&self) -> u16 {
+        return 1;
+    }
+    
+    fn sample_rate(&self) -> u32 {
+        self.sample_rate
+    }
+
+    fn current_frame_len(&self) -> Option<usize> {
+        None
+    }
+
+    fn total_duration(&self) -> Option<Duration> {
+        None
+    }
+}
+
+
+fn sine(x: f32) -> f32 {
     x.sin()
 }
 
-fn square(x: f64) -> f64 {
+fn square(x: f32) -> f32 {
     if x < PI {
         1.0
     } else {
@@ -54,69 +112,30 @@ fn square(x: f64) -> f64 {
     }
 }
 
-fn main() {
-    let sample_rate = 48000.0;
-    let frequency = 131.0;
+fn main() -> Result<(), Box<dyn Error>> {
+    let sample_rate = 48000;
+    let frequency = 20.0;
 
-    let wavetable = WaveTable::new(square, 128);;
+    let wavetable_size = 128;
+    let wavetable = WaveTable::new(sine, wavetable_size);
 
-    let host = cpal::default_host();
-    let device = host.default_output_device().expect("Failed to get default output device");
-    let config = device.default_output_config().unwrap();
+    let mut oscillator = WaveTableOscillator::new(sample_rate, wavetable);
+    oscillator.set_frequency(frequency);
 
-    let mut phase = 0.0;
-    let phase_step = frequency * TAU / sample_rate;
+    let (_stream, stream_handle) = OutputStream::try_default()?;
 
-    let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
+    let _result = stream_handle.play_raw(oscillator.convert_samples());
 
-    let stream = match config.sample_format() {
-        cpal::SampleFormat::F32 => device.build_output_stream(
-            &config.into(),
-            move |data: &mut [f32], _| {
-                for sample in data.iter_mut() {
-                    *sample = wavetable.lookup(phase) as f32;
-                    phase += phase_step;
-                }
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::I16 => device.build_output_stream(
-            &config.into(),
-            move |data: &mut [i16], _| {
-                for sample in data.iter_mut() {
-                    *sample = (wavetable.lookup(phase) * i16::MAX as f64) as i16;
-                    phase += phase_step;
-                }
-            },
-            err_fn,
-            None,
-        ),
-        cpal::SampleFormat::U16 => device.build_output_stream(
-            &config.into(),
-            move |data: &mut [u16], _| {
-                for sample in data.iter_mut() {
-                    *sample = (wavetable.lookup(phase) * u16::MAX as f64) as u16;
-                    phase += phase_step;
-                }
-            },
-            err_fn,
-            None,
-        ),
-        _ => panic!("help")
-    }.unwrap();
-
-    stream.play().unwrap();
-
-    // Keep the thread alive to continue playback
     loop {
-        thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(Duration::from_millis(100));
     }
+
+    Ok(())
 
 
     //idk
     /*
-    let duration = Duration::from_secs_f64(1.0 / sample_rate as f64);
+    let duration = Duration::from_secs_f32(1.0 / sample_rate as f32);
     loop {
         let start_time = Instant::now();
 
