@@ -1,4 +1,4 @@
-use std::{f64::consts::TAU, thread, time::{Duration, Instant}};
+use std::{f64::consts::{PI, TAU}, thread};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
@@ -42,11 +42,23 @@ impl WaveTable {
     }
 }
 
-fn main() {
-    let sample_rate = 44100.0;
-    let frequency = 440.0;
+fn sine(x: f64) -> f64 {
+    x.sin()
+}
 
-    let sine = WaveTable::new(f64::sin, 64);
+fn square(x: f64) -> f64 {
+    if x < PI {
+        1.0
+    } else {
+        -1.0
+    }
+}
+
+fn main() {
+    let sample_rate = 48000.0;
+    let frequency = 131.0;
+
+    let wavetable = WaveTable::new(square, 128);;
 
     let host = cpal::default_host();
     let device = host.default_output_device().expect("Failed to get default output device");
@@ -62,7 +74,7 @@ fn main() {
             &config.into(),
             move |data: &mut [f32], _| {
                 for sample in data.iter_mut() {
-                    *sample = sine.lookup(phase) as f32;
+                    *sample = wavetable.lookup(phase) as f32;
                     phase += phase_step;
                 }
             },
@@ -73,7 +85,7 @@ fn main() {
             &config.into(),
             move |data: &mut [i16], _| {
                 for sample in data.iter_mut() {
-                    *sample = (sine.lookup(phase) * i16::MAX as f64) as i16;
+                    *sample = (wavetable.lookup(phase) * i16::MAX as f64) as i16;
                     phase += phase_step;
                 }
             },
@@ -84,7 +96,7 @@ fn main() {
             &config.into(),
             move |data: &mut [u16], _| {
                 for sample in data.iter_mut() {
-                    *sample = (sine.lookup(phase) * u16::MAX as f64) as u16;
+                    *sample = (wavetable.lookup(phase) * u16::MAX as f64) as u16;
                     phase += phase_step;
                 }
             },
@@ -102,6 +114,8 @@ fn main() {
     }
 
 
+    //idk
+    /*
     let duration = Duration::from_secs_f64(1.0 / sample_rate as f64);
     loop {
         let start_time = Instant::now();
@@ -112,7 +126,7 @@ fn main() {
         if elapsed_time < duration {
             thread::sleep(duration - elapsed_time);
         }
-    }
+    }*/
 }
 
 
