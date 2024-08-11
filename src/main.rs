@@ -24,7 +24,7 @@ impl WaveTable {
 
         Self {
             table,
-            inverse_step: 1.0/step,
+            inverse_step: (length as f32)/TAU,
         }
     }
 
@@ -32,10 +32,10 @@ impl WaveTable {
         let phase = phase % TAU;
         let index = phase * self.inverse_step;
 
-        let index_floor = index.floor().clamp(0.0, (self.table.len()-2) as f32);
-        let index_floor_usize = (index_floor as usize).clamp(0, self.table.len()-2);
+        let index_trunc = index as usize;
+        let next_index_trunc = (index_trunc+1) % self.len();
 
-        lerp(self.table[index_floor_usize], self.table[index_floor_usize+1], index-index_floor)
+        lerp(self.table[index_trunc], self.table[next_index_trunc], index-(index_trunc as f32))
     }
     
     pub fn len(&self) -> usize {
@@ -62,7 +62,7 @@ impl WaveTableOscillator {
     }
 
     pub fn set_frequency(&mut self, frequency: f32) {
-        self.index_increment = (frequency * self.wave_table.len() as f32) / (self.sample_rate as f32);
+        self.index_increment = frequency*TAU / (self.sample_rate as f32);
     }
 
     pub fn get_sample(&mut self) -> f32 {
@@ -105,19 +105,27 @@ fn sine(x: f32) -> f32 {
 }
 
 fn square(x: f32) -> f32 {
-    if x < PI {
+    if x <= PI {
         1.0
     } else {
         -1.0
     }
 }
 
+fn saw(x: f32) -> f32 {
+    if x <= PI {
+        (x*2.0)/PI - 1.0
+    } else {
+        ((x-PI)*2.0)/PI - 1.0
+    }
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let frequency = 20.0;
+    let frequency = 60.0;
 
     let wavetable_size = 128;
-    let wavetable = WaveTable::new(sine, wavetable_size);
+    let wavetable = WaveTable::new(square, wavetable_size);
 
     let mut oscillator = WaveTableOscillator::new(sample_rate, wavetable);
     oscillator.set_frequency(frequency);
