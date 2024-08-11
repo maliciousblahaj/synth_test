@@ -1,4 +1,4 @@
-use std::{error::Error, f32::consts::{PI, TAU}, thread, time::Duration};
+use std::{error::Error, f32::consts::{PI, TAU}, time::Duration};
 
 use rodio::{OutputStream, Source};
 
@@ -100,10 +100,12 @@ impl Source for WaveTableOscillator {
 }
 
 
+#[allow(unused)]
 fn sine(x: f32) -> f32 {
     x.sin()
 }
 
+#[allow(unused)]
 fn square(x: f32) -> f32 {
     if x <= PI {
         1.0
@@ -112,6 +114,7 @@ fn square(x: f32) -> f32 {
     }
 }
 
+#[allow(unused)]
 fn saw(x: f32) -> f32 {
     if x <= PI {
         (x*2.0)/PI - 1.0
@@ -122,10 +125,10 @@ fn saw(x: f32) -> f32 {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let frequency = 60.0;
+    let frequency = 220.0;
 
-    let wavetable_size = 128;
-    let wavetable = WaveTable::new(square, wavetable_size);
+    let wavetable_size = 256;
+    let wavetable = WaveTable::new(sine, wavetable_size);
 
     let mut oscillator = WaveTableOscillator::new(sample_rate, wavetable);
     oscillator.set_frequency(frequency);
@@ -137,9 +140,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     loop {
         std::thread::sleep(Duration::from_millis(100));
     }
-
-    Ok(())
-
 
     //idk
     /*
