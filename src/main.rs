@@ -6,13 +6,21 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + t * (b - a)
 }
 
+#[derive(Clone)]
 struct WaveTable {
     table: Vec<f32>,
     inverse_step: f32,
 }
 
 impl WaveTable {
-    pub fn new<F>(function: F, length: usize) -> Self
+    pub fn new(table: Vec<f32>) -> Self {
+        Self {
+            inverse_step: (table.len() as f32)/TAU,
+            table,
+        }
+    }
+
+    pub fn from_fn<F>(function: F, length: usize) -> Self
         where F: Fn(f32) -> f32,
     {
         let mut table = Vec::with_capacity(length);
@@ -43,6 +51,7 @@ impl WaveTable {
     }
 }
 
+#[derive(Clone)]
 struct WaveTableOscillator {
     sample_rate: u32,
     wave_table: WaveTable,
@@ -73,15 +82,50 @@ impl WaveTableOscillator {
     }
 }
 
-impl Iterator for WaveTableOscillator {
-    type Item = f32;
+struct Synthesizer {
+    sample_rate: u32,
+    oscillators: Vec<WaveTableOscillator>,
+    amplitude: f32,
+}
 
-    fn next(&mut self) -> Option<f32> {
-        return Some(self.get_sample())
+impl Synthesizer {
+    pub fn new(sample_rate: u32, oscillators: Vec<WaveTableOscillator>) -> Self {
+        let mut oscillators = oscillators;
+        for oscillator in oscillators.iter_mut() {
+            oscillator.sample_rate = sample_rate;
+        }
+
+        Self {
+            sample_rate,
+            oscillators,
+            amplitude: decibel_to_amplitude(-20.0),
+        }
+    }
+
+    pub fn set_gain(&mut self, gain: f32) {
+        self.amplitude = decibel_to_amplitude(gain);
     }
 }
 
-impl Source for WaveTableOscillator {
+/// Converts gain in decibel to a number to multiply the waveforms with
+fn decibel_to_amplitude(gain: f32) -> f32 {
+    10f32.powf(gain/20f32)
+}
+
+impl Iterator for Synthesizer {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<f32> {
+        let mut sample = 0.0;
+        for oscillator in self.oscillators.iter_mut() {
+            sample += oscillator.get_sample();
+        }
+
+        return Some(sample * self.amplitude)
+    }
+}
+
+impl Source for Synthesizer {
     fn channels(&self) -> u16 {
         return 1;
     }
@@ -125,17 +169,20 @@ fn saw(x: f32) -> f32 {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let frequency = 220.0;
+    let base_frequency = 220.0;
 
-    let wavetable_size = 256;
-    let wavetable = WaveTable::new(sine, wavetable_size);
+    let wavetable = WaveTable::from_fn(sine, 256);
 
-    let mut oscillator = WaveTableOscillator::new(sample_rate, wavetable);
-    oscillator.set_frequency(frequency);
+    let mut osc1 = WaveTableOscillator::new(sample_rate, wavetable);
+    let mut osc2 = osc1.clone();
+    osc1.set_frequency(base_frequency);
+    osc2.set_frequency(base_frequency*1.5);
+
+    let synth = Synthesizer::new(sample_rate, vec![osc1, osc2]);
 
     let (_stream, stream_handle) = OutputStream::try_default()?;
 
-    let _result = stream_handle.play_raw(oscillator.convert_samples());
+    let _result = stream_handle.play_raw(synth.convert_samples());
 
     loop {
         std::thread::sleep(Duration::from_millis(100));
