@@ -182,7 +182,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let oscillator_blueprint = WaveTableOscillator::new(sample_rate, wavetable);
 
     let mut oscillators = Vec::new();
-    for i in 1..=11 {
+    for i in 1..=8 {
         let mut osc = oscillator_blueprint.clone();
         osc.set_frequency(base_frequency*(i as f32));
         oscillators.push(osc)
