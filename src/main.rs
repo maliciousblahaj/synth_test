@@ -57,6 +57,7 @@ struct WaveTableOscillator {
     wave_table: WaveTable,
     index: f32,
     index_increment: f32,
+    amplitude: f32
 }
 
 impl WaveTableOscillator {
@@ -67,7 +68,12 @@ impl WaveTableOscillator {
             wave_table,
             index: 0.0,
             index_increment: 0.0,
+            amplitude: 1.0,
         }
+    }
+
+    pub fn set_amplitude(&mut self, amplitude: f32) {
+        self.amplitude = amplitude;
     }
 
     pub fn set_frequency(&mut self, frequency: f32) {
@@ -78,7 +84,7 @@ impl WaveTableOscillator {
         let sample = self.wave_table.lookup(self.index);
         self.index += self.index_increment;
         self.index %= TAU;
-        sample
+        sample*self.amplitude
     }
 }
 
@@ -169,16 +175,20 @@ fn saw(x: f32) -> f32 {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let base_frequency = 220.0;
+    let base_frequency = 22.5;
 
-    let wavetable = WaveTable::from_fn(sine, 256);
+    let wavetable = WaveTable::from_fn(saw, 256);
 
-    let mut osc1 = WaveTableOscillator::new(sample_rate, wavetable);
-    let mut osc2 = osc1.clone();
-    osc1.set_frequency(base_frequency);
-    osc2.set_frequency(base_frequency*1.5);
+    let oscillator_blueprint = WaveTableOscillator::new(sample_rate, wavetable);
 
-    let synth = Synthesizer::new(sample_rate, vec![osc1, osc2]);
+    let mut oscillators = Vec::new();
+    for i in 1..=11 {
+        let mut osc = oscillator_blueprint.clone();
+        osc.set_frequency(base_frequency*(i as f32));
+        oscillators.push(osc)
+    }
+
+    let synth = Synthesizer::new(sample_rate, oscillators);
 
     let (_stream, stream_handle) = OutputStream::try_default()?;
 
