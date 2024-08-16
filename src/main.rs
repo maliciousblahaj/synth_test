@@ -2,6 +2,8 @@ use std::{error::Error, f32::consts::{PI, TAU}, time::Duration};
 
 use rodio::{OutputStream, Source};
 
+const INVERSE_TAU: f32 = 1.0/TAU;
+
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + t * (b - a)
 }
@@ -157,6 +159,7 @@ fn sine(x: f32) -> f32 {
 
 #[allow(unused)]
 fn square(x: f32) -> f32 {
+    let x = x % TAU;
     if x <= PI {
         1.0
     } else {
@@ -166,19 +169,26 @@ fn square(x: f32) -> f32 {
 
 #[allow(unused)]
 fn saw(x: f32) -> f32 {
-    return (x + PI) / PI % 2.0 - 1.0
+    ((x + PI) / PI) % 2.0 - 1.0
 }
+
+#[allow(unused)]
+fn triangle(x: f32) -> f32 {
+    let x = x + 0.5*PI;
+    4.0 * (x*INVERSE_TAU - (x*INVERSE_TAU + 0.5).floor()).abs() - 1.0
+}
+
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let base_frequency = 55.0;
+    let base_frequency = 220.0;
 
-    let wavetable = WaveTable::from_fn(saw, 256);
+    let wavetable = WaveTable::from_fn(sine, 256);
 
     let oscillator_blueprint = WaveTableOscillator::new(sample_rate, wavetable);
 
     let mut oscillators = Vec::new();
-    for i in 1..=8 {
+    for i in 1..=7 {
         let mut osc = oscillator_blueprint.clone();
         osc.set_frequency(base_frequency*(i as f32));
         oscillators.push(osc)
