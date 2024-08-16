@@ -1,5 +1,5 @@
 [package]
-name = "synth_test"
+name = "wavetable_synthesizer"
 version = "0.1.0"
 edition = "2021"
 

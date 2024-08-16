@@ -166,16 +166,12 @@ fn square(x: f32) -> f32 {
 
 #[allow(unused)]
 fn saw(x: f32) -> f32 {
-    if x <= PI {
-        (x*2.0)/PI - 1.0
-    } else {
-        ((x-PI)*2.0)/PI - 1.0
-    }
+    return (x + PI) / PI % 2.0 - 1.0
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let base_frequency = 22.5;
+    let base_frequency = 55.0;
 
     let wavetable = WaveTable::from_fn(saw, 256);
 
