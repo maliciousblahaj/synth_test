@@ -12,10 +12,24 @@ pub struct SynthesizerUI {
     gain_range: FloatRange,
     gain_param: NormalParam,
 
+    oscillators_ui: Vec<OscillatorUi>,
+}
+
+pub struct OscillatorUi {
     pitch_range: FreqRange,
     pitch_param: NormalParam,
 
     waveform: Option<WaveForm>,
+}
+
+impl OscillatorUi {
+    pub fn new(pitch_range: FreqRange, pitch_param: NormalParam, waveform: Option<WaveForm>) -> Self {
+        Self {
+            pitch_range,
+            pitch_param,
+            waveform
+        }
+    }
 }
 
 ///parameters to initialize a SynthesizerUI
@@ -34,8 +48,8 @@ impl Flags {
 #[derive(Clone, Debug)]
 pub enum Message {
     GainChanged(Normal),
-    PitchChanged(Normal),
-    WaveFormSelected(WaveForm),
+    PitchChanged(usize, Normal),
+    WaveFormSelected(usize, WaveForm),
 }
 
 impl Application for SynthesizerUI {
@@ -45,25 +59,31 @@ impl Application for SynthesizerUI {
     type Flags = Flags;
 
     fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
+        let mut oscillators_ui: Vec<_> = Vec::new();
+
         let guard = flags.synthesizer.lock().unwrap();
         let gain = amplitude_to_decibel(guard.get_amplitude());
-        let pitch = guard.get_osc1_pitch();
+        for oscillator in guard.get_oscillators() {
+            let pitch_range = FreqRange::new(20.0, 20000.0);
+            oscillators_ui.push(
+                OscillatorUi::new(
+                    pitch_range, 
+                    pitch_range.normal_param(oscillator.get_frequency(), 220.0),
+                    None,
+                )
+            );
+        }
         drop(guard);
 
         let gain_range =  FloatRange::new(-50.0, 0.0);
         
-        let pitch_range = FreqRange::new(20.0, 20000.0);
-
         (Self {
             synthesizer: flags.synthesizer,
 
             gain_range,
             gain_param: gain_range.normal_param(gain, -20.0),
 
-            pitch_range,
-            pitch_param: pitch_range.normal_param(pitch, 220.0),
-
-            waveform: None,
+            oscillators_ui,
         }, Command::none())
     }
 
@@ -71,22 +91,23 @@ impl Application for SynthesizerUI {
         match message {
             Message::GainChanged(normal) => {
                 self.gain_param.update(normal);
+                let new_gain = self.gain_range.unmap_to_value(normal);
                 let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_gain(self.gain_range.unmap_to_value(normal));
+                guard.set_gain(new_gain);
                 drop(guard);
-                println!("{}", self.gain_range.unmap_to_value(normal));
             },
-            Message::PitchChanged(normal) => {
-                self.pitch_param.update(normal);
+            Message::PitchChanged(oscillator_id, normal) => {
+                let oscillator_ui = &mut self.oscillators_ui[oscillator_id];
+                oscillator_ui.pitch_param.update(normal);
+                let new_pitch = oscillator_ui.pitch_range.unmap_to_value(normal);
                 let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_osc1_pitch(self.pitch_range.unmap_to_value(normal));
+                guard.set_oscillator_pitch(oscillator_id, new_pitch);
                 drop(guard);
-                println!("{}", self.pitch_range.unmap_to_value(normal));
             },
-            Message::WaveFormSelected(waveform) => {
+            Message::WaveFormSelected(oscillator_id, waveform) => {
                 let wavetable = WaveTable::from_fn(waveform.get_fn(), 128);
                 let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_osc1_wavetable(wavetable);
+                guard.set_oscillator_wavetable(oscillator_id, wavetable);
                 drop(guard);
                 println!("{waveform:?}");
             }
@@ -113,10 +134,17 @@ impl Application for SynthesizerUI {
             .height(100)
             .width(100);
 
-        let pitch_knob = Knob::new(
-            self.pitch_param,
-            Message::PitchChanged,
-        );
+        let pitch_knobs = {
+            let mut pitch_knobs = Vec::new();
+            for (id, oscillator_ui) in self.oscillators_ui.iter().enumerate() {
+                pitch_knobs.push( 
+                    Knob::new(
+                        self.pitch_param,
+                        Message::PitchChanged)
+                );
+            }
+           pitch_knobs
+        };
 
         let pitch_widget = container(
             column![
@@ -152,8 +180,4 @@ impl Application for SynthesizerUI {
     fn title(&self) -> String {
         String::from("Synthesizer")
     }
-    
-
-    
-
 }

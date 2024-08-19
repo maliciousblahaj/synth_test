@@ -52,6 +52,7 @@ impl WaveTable {
 
 #[derive(Clone)]
 pub struct WaveTableOscillator {
+    active: bool,
     sample_rate: u32,
     wavetable: WaveTable,
     index: f32,
@@ -64,6 +65,7 @@ impl WaveTableOscillator {
     pub fn new(sample_rate: u32, wavetable: WaveTable) -> Self 
     {       
         Self {
+            active: false,
             sample_rate,
             wavetable,
             index: 0.0,
@@ -71,6 +73,14 @@ impl WaveTableOscillator {
             amplitude: 1.0,
             frequency: 0.0,
         }
+    }
+
+    pub fn activate(&mut self) {
+        self.active = true;
+    }
+
+    pub fn decativate(&mut self) {
+        self.active = false;
     }
 
     pub fn set_amplitude(&mut self, amplitude: f32) {
@@ -91,6 +101,9 @@ impl WaveTableOscillator {
     }
 
     pub fn get_sample(&mut self) -> f32 {
+        if !self.active {
+            return 0.0;
+        }
         let sample = self.wavetable.lookup(self.index);
         self.index += self.index_increment;
         self.index %= TAU;
@@ -107,8 +120,8 @@ pub struct Synthesizer {
 impl Synthesizer {
     pub fn new(sample_rate: u32, oscillators: Vec<WaveTableOscillator>) -> Self {
         let mut oscillators = oscillators;
-        for oscillator in oscillators.iter_mut() {
-            oscillator.sample_rate = sample_rate;
+        for osc in oscillators.iter_mut() {
+            osc.sample_rate = sample_rate;
         }
 
         Self {
@@ -139,18 +152,26 @@ impl Synthesizer {
         sample * self.amplitude
     }
 
-    //temporary function 1
-    pub fn get_osc1_pitch(&self) -> f32 {
-        self.oscillators[0].get_frequency()
+    pub fn get_oscillators(&self) -> &Vec<WaveTableOscillator> {
+        &self.oscillators
     }
 
-    //temporary function 2
-    pub fn set_osc1_pitch(&mut self, frequency: f32) {
-        self.oscillators[0].set_frequency(frequency);
+    pub fn get_oscillators_mut(&mut self) -> &mut Vec<WaveTableOscillator> {
+        &mut self.oscillators
     }
 
-    //temporary function 3
-    pub fn set_osc1_wavetable(&mut self, wavetable: WaveTable) {
-        self.oscillators[0].set_wavetable(wavetable)
+    /// will panic if id is not valid
+    pub fn get_oscillator_pitch(&self, id: usize) -> f32 {
+        self.oscillators[id].get_frequency()
+    }
+
+    /// will panic if id is not valid
+    pub fn set_oscillator_pitch(&mut self, id: usize, frequency: f32) {
+        self.oscillators[id].set_frequency(frequency);
+    }
+
+    /// will panic if id is not valid
+    pub fn set_oscillator_wavetable(&mut self, id: usize, wavetable: WaveTable) {
+        self.oscillators[id].set_wavetable(wavetable);
     }
 }
