@@ -3,7 +3,7 @@ use std::{sync::{Arc, Mutex}, time::Duration};
 use rodio::Source;
 use synthesis::Synthesizer;
 
-pub mod ui;
+pub mod gui;
 pub mod synthesis;
 
 pub struct AudioSource {

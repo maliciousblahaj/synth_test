@@ -53,21 +53,23 @@ impl WaveTable {
 #[derive(Clone)]
 pub struct WaveTableOscillator {
     sample_rate: u32,
-    wave_table: WaveTable,
+    wavetable: WaveTable,
     index: f32,
     index_increment: f32,
-    amplitude: f32
+    amplitude: f32,
+    frequency: f32,
 }
 
 impl WaveTableOscillator {
-    pub fn new(sample_rate: u32, wave_table: WaveTable) -> Self 
+    pub fn new(sample_rate: u32, wavetable: WaveTable) -> Self 
     {       
         Self {
             sample_rate,
-            wave_table,
+            wavetable,
             index: 0.0,
             index_increment: 0.0,
             amplitude: 1.0,
+            frequency: 0.0,
         }
     }
 
@@ -77,10 +79,19 @@ impl WaveTableOscillator {
 
     pub fn set_frequency(&mut self, frequency: f32) {
         self.index_increment = frequency*TAU / (self.sample_rate as f32);
+        self.frequency = frequency;
+    }
+
+    pub fn get_frequency(&self) -> f32 {
+        self.frequency
+    }
+
+    pub fn set_wavetable(&mut self, wavetable: WaveTable) {
+        self.wavetable = wavetable;
     }
 
     pub fn get_sample(&mut self) -> f32 {
-        let sample = self.wave_table.lookup(self.index);
+        let sample = self.wavetable.lookup(self.index);
         self.index += self.index_increment;
         self.index %= TAU;
         sample*self.amplitude
@@ -126,5 +137,20 @@ impl Synthesizer {
         }
 
         sample * self.amplitude
+    }
+
+    //temporary function 1
+    pub fn get_osc1_pitch(&self) -> f32 {
+        self.oscillators[0].get_frequency()
+    }
+
+    //temporary function 2
+    pub fn set_osc1_pitch(&mut self, frequency: f32) {
+        self.oscillators[0].set_frequency(frequency);
+    }
+
+    //temporary function 3
+    pub fn set_osc1_wavetable(&mut self, wavetable: WaveTable) {
+        self.oscillators[0].set_wavetable(wavetable)
     }
 }

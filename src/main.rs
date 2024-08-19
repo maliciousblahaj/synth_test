@@ -2,13 +2,13 @@ use std::{error::Error, sync::{Arc, Mutex}};
 
 use iced::{Application, Settings};
 use rodio::{OutputStream, Source};
-use wavetable_synthesizer::{synthesis::{waveforms::sine, Synthesizer, WaveTable, WaveTableOscillator}, ui::{Flags, SynthesizerUI}, AudioSource};
+use wavetable_synthesizer::{gui::{Flags, SynthesizerUI}, synthesis::{waveforms::{saw, square, WaveForm}, Synthesizer, WaveTable, WaveTableOscillator}, AudioSource};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let sample_rate = 48000;
-    let base_frequency = 440.0;
+    let base_frequency = 50.0;
 
-    let wavetable = WaveTable::from_fn(sine, 256);
+    let wavetable = WaveTable::from_fn(WaveForm::Square.get_fn(), 128);
 
     let oscillator_blueprint = WaveTableOscillator::new(sample_rate, wavetable);
 
