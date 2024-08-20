@@ -5,6 +5,9 @@ use synthesis::Synthesizer;
 
 pub mod gui;
 pub mod synthesis;
+pub mod error;
+
+pub use error::{Error, Result};
 
 #[allow(unused)]
 pub mod audio;
