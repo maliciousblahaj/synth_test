@@ -6,7 +6,7 @@ use iced_audio::{FloatRange, FreqRange, Knob, Normal, NormalParam};
 use crate::synthesis::{math::amplitude_to_decibel, waveforms::WaveForm, Synthesizer, WaveTable};
 
 pub struct SynthesizerUI {
-    synthesizer: Arc<Mutex<Synthesizer>>,
+    synthesizer: Arc<Synthesizer>,
 
 
     gain_range: FloatRange,
@@ -34,11 +34,11 @@ impl OscillatorUi {
 
 ///parameters to initialize a SynthesizerUI
 pub struct Flags {
-    synthesizer: Arc<Mutex<Synthesizer>>,
+    synthesizer: Arc<Synthesizer>,
 }
 
 impl Flags {
-    pub fn new(synthesizer: Arc<Mutex<Synthesizer>>) -> Self {
+    pub fn new(synthesizer: Arc<Synthesizer>) -> Self {
         Self {
             synthesizer,
         }
@@ -61,9 +61,10 @@ impl Application for SynthesizerUI {
     fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
         let mut oscillators_ui: Vec<_> = Vec::new();
 
-        let guard = flags.synthesizer.lock().unwrap();
-        let gain = amplitude_to_decibel(guard.get_amplitude());
-        for oscillator in guard.get_oscillators() {
+        let synthesizer = flags.synthesizer;
+
+        let gain = amplitude_to_decibel(synthesizer.get_amplitude());
+        for oscillator in synthesizer.get_oscillators() {
             let pitch_range = FreqRange::new(20.0, 20000.0);
             oscillators_ui.push(
                 OscillatorUi::new(
@@ -73,12 +74,11 @@ impl Application for SynthesizerUI {
                 )
             );
         }
-        drop(guard);
 
         let gain_range =  FloatRange::new(-50.0, 0.0);
         
         (Self {
-            synthesizer: flags.synthesizer,
+            synthesizer,
 
             gain_range,
             gain_param: gain_range.normal_param(gain, -20.0),
@@ -92,23 +92,19 @@ impl Application for SynthesizerUI {
             Message::GainChanged(normal) => {
                 self.gain_param.update(normal);
                 let new_gain = self.gain_range.unmap_to_value(normal);
-                let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_gain(new_gain);
-                drop(guard);
+                
+                self.synthesizer.set_gain(new_gain);
             },
             Message::PitchChanged(oscillator_id, normal) => {
                 let oscillator_ui = &mut self.oscillators_ui[oscillator_id];
                 oscillator_ui.pitch_param.update(normal);
                 let new_pitch = oscillator_ui.pitch_range.unmap_to_value(normal);
-                let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_oscillator_pitch(oscillator_id, new_pitch);
-                drop(guard);
+                
+                self.synthesizer.set_oscillator_pitch(oscillator_id, new_pitch);
             },
             Message::WaveFormSelected(oscillator_id, waveform) => {
                 let wavetable = WaveTable::from_fn(waveform.get_fn(), 128);
-                let mut guard = self.synthesizer.lock().unwrap();
-                guard.set_oscillator_wavetable(oscillator_id, wavetable);
-                drop(guard);
+                self.synthesizer.set_oscillator_wavetable(oscillator_id, wavetable);
                 println!("{waveform:?}");
             }
         }

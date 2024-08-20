@@ -6,6 +6,9 @@ use synthesis::Synthesizer;
 pub mod gui;
 pub mod synthesis;
 
+#[allow(unused)]
+pub mod audio;
+
 pub struct AudioSource {
     synthesizer: Arc<Mutex<Synthesizer>>
 }
