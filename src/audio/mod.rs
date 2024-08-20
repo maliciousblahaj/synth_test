@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 pub struct AudioGraph {
-    master_node: AudioNode
+    master_node: AudioNode,
 }
 
 impl AudioGraph {
@@ -27,10 +27,14 @@ impl AudioNode {
             children
         }
     }
+
+    pub fn render(&self) -> f32 {
+        self.device.render(&self.children)
+    }
 }
 
 pub trait AudioDevice {
-    fn get_sample(&mut self, x: f32) -> f32;
+    fn render(&mut self, children: &Vec<AudioNode>) -> f32;
 }
 
 pub struct MasterOutput {
@@ -54,9 +58,17 @@ impl MasterOutput {
 }
 
 impl AudioDevice for MasterOutput {
-    fn get_sample(&mut self, x: f32) -> f32 {
-        x * self.amplitude
+    fn render(&mut self, children: &Vec<AudioNode>) -> f32 {
+        render_nodes(children) * self.amplitude
     }
+}
+
+pub fn render_nodes(audio_nodes: &Vec<AudioNode>) -> f32 {
+    let mut sample = 0.0;
+    for node in audio_nodes {
+        sample += node.render();
+    }
+    sample
 }
 
 /*
