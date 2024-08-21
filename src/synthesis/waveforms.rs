@@ -6,6 +6,7 @@ pub enum WaveForm {
     Triangle,
     Square,
     Saw,
+    Table,
 }
 
 /*
@@ -54,6 +55,7 @@ impl WaveForm {
             Self::Triangle => triangle,
             Self::Square => square,
             Self::Saw => saw,
+            Self::Table => panic!("Invalid get_fn from WaveTable"),
         }
     }
 }
@@ -68,6 +70,7 @@ impl std::fmt::Display for WaveForm {
                 Self::Triangle => "Triangle",
                 Self::Square => "Square",
                 Self::Saw => "Saw",
+                Self::Table => "WaveTable",
             }
         )
     }

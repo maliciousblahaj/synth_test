@@ -3,44 +3,91 @@ use std::sync::{Arc, Mutex};
 use iced::{executor, widget::{column, container, pick_list, row, text}, Application, Command, Element, Theme};
 use iced_audio::{FloatRange, FreqRange, Knob, Normal, NormalParam};
 
-use crate::synthesis::{math::amplitude_to_decibel, waveforms::WaveForm, Synthesizer, WaveTable};
+use crate::{devices::{amplifier::Amplifier, oscillator::WaveTableOscillator}, synthesis::waveforms::WaveForm};
+
 
 pub struct SynthesizerUI {
-    synthesizer: Arc<Synthesizer>,
+    amplifier_ui: SynthAmplifierUI,
 
+    oscillators_ui: Vec<OscillatorUI>,
+}
+
+impl SynthesizerUI {
+    pub fn new(amplifier_ui: SynthAmplifierUI, oscillators_ui: Vec<OscillatorUI>) -> Self {
+        Self {
+            amplifier_ui,
+            oscillators_ui,
+        }
+    }
+}
+
+pub struct SynthAmplifierUI {
+    amplifier: Arc<Mutex<Box<Amplifier>>>,
 
     gain_range: FloatRange,
     gain_param: NormalParam,
-
-    oscillators_ui: Vec<OscillatorUi>,
 }
 
-pub struct OscillatorUi {
+impl SynthAmplifierUI {
+    pub fn new(amplifier: Arc<Mutex<Box<Amplifier>>>) -> Self {
+        let guard = amplifier.lock().unwrap();
+        let gain = guard.get_amplitude();
+        drop(guard);
+
+        let gain_range = FloatRange::new(-50.0, 0.0);
+
+        Self {
+            amplifier,
+
+            gain_range,
+            gain_param: gain_range.normal_param(gain, -20.0),
+        }
+    }
+}
+
+pub struct OscillatorUI {
+    oscillator: Arc<Mutex<Box<WaveTableOscillator>>>,
+
     pitch_range: FreqRange,
     pitch_param: NormalParam,
 
-    waveform: Option<WaveForm>,
+    waveform: WaveForm,
 }
 
-impl OscillatorUi {
-    pub fn new(pitch_range: FreqRange, pitch_param: NormalParam, waveform: Option<WaveForm>) -> Self {
+impl OscillatorUI {
+    pub fn new(oscillator: Arc<Mutex<Box<WaveTableOscillator>>>) -> Self {
+        let guard = oscillator.lock().unwrap();
+        let frequency = guard.get_frequency();
+        let waveform = guard.get_waveform();
+        drop(guard);
+
+        let pitch_range = FreqRange::new(20.0, 20000.0);
+
         Self {
+            oscillator,
             pitch_range,
-            pitch_param,
-            waveform
+            pitch_param: pitch_range.normal_param(frequency, 220.0),
+            waveform,
         }
     }
 }
 
 ///parameters to initialize a SynthesizerUI
 pub struct Flags {
-    synthesizer: Arc<Synthesizer>,
+    amplifier_ui: SynthAmplifierUI,
+    oscillators_ui: Vec<OscillatorUI>,
 }
 
 impl Flags {
-    pub fn new(synthesizer: Arc<Synthesizer>) -> Self {
+    pub fn new(amplifier: Arc<Mutex<Box<Amplifier>>>, oscillators: Vec<Arc<Mutex<Box<WaveTableOscillator>>>>) -> Self {
+        let mut oscillators_ui = Vec::with_capacity(oscillators.len());
+        for oscillator in oscillators {
+            oscillators_ui.push(OscillatorUI::new(oscillator));
+        }
+
         Self {
-            synthesizer,
+            amplifier_ui: SynthAmplifierUI::new(amplifier),
+            oscillators_ui,
         }
     }
 }
@@ -52,6 +99,7 @@ pub enum Message {
     WaveFormSelected(usize, WaveForm),
 }
 
+
 impl Application for SynthesizerUI {
     type Message = Message;
     type Executor = executor::Default;
@@ -59,32 +107,13 @@ impl Application for SynthesizerUI {
     type Flags = Flags;
 
     fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        let mut oscillators_ui: Vec<_> = Vec::new();
-
-        let synthesizer = flags.synthesizer;
-
-        let gain = amplitude_to_decibel(synthesizer.get_amplitude());
-        for oscillator in synthesizer.get_oscillators() {
-            let pitch_range = FreqRange::new(20.0, 20000.0);
-            oscillators_ui.push(
-                OscillatorUi::new(
-                    pitch_range, 
-                    pitch_range.normal_param(oscillator.get_frequency(), 220.0),
-                    None,
-                )
-            );
-        }
-
-        let gain_range =  FloatRange::new(-50.0, 0.0);
-        
-        (Self {
-            synthesizer,
-
-            gain_range,
-            gain_param: gain_range.normal_param(gain, -20.0),
-
-            oscillators_ui,
-        }, Command::none())
+        (
+            Self {
+                amplifier_ui: flags.amplifier_ui,
+                oscillators_ui: flags.oscillators_ui,
+            }, 
+            Command::none(),
+        )
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {

@@ -1,11 +1,12 @@
 use std::{sync::{Arc, Mutex}, time::Duration};
 
 use rodio::Source;
-use synthesis::Synthesizer;
 
 pub mod gui;
-pub mod synthesis;
+pub mod devices;
 pub mod error;
+pub mod math;
+pub mod synthesis;
 
 pub use error::{Error, Result};
 
