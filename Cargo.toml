@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 iced = "0.9"
-iced_audio = "0.12.0"
+iced_audio = "0.12"
 rodio = "0.19"
 strum_macros = "0.26.4"
+iced_lazy = "0.6"
+iced_native = "0.10"

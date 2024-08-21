@@ -54,7 +54,7 @@ impl Source for AudioGraph {
     }
     
     fn sample_rate(&self) -> u32 {
-        self.sample_rate
+        (*self.sample_rate).clone()
     }
 
     fn current_frame_len(&self) -> Option<usize> {

@@ -36,7 +36,7 @@ impl WaveTableOscillator {
     }
 
     pub fn get_sample_rate(&self) -> u32 {
-        self.sample_rate
+        (*self.sample_rate).clone()
     }
 
     pub fn set_amplitude(&mut self, amplitude: f32) {
@@ -44,7 +44,7 @@ impl WaveTableOscillator {
     }
 
     pub fn set_frequency(&mut self, frequency: f32) {
-        self.phase_increment = frequency*TAU / (self.sample_rate as f32);
+        self.phase_increment = frequency*TAU / (self.get_sample_rate() as f32);
         self.frequency = frequency;
     }
 

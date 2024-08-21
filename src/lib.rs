@@ -13,6 +13,7 @@ pub use error::{Error, Result};
 #[allow(unused)]
 pub mod audio;
 
+/*
 pub struct AudioSource {
     synthesizer: Arc<Mutex<Synthesizer>>
 }
@@ -54,3 +55,4 @@ impl Source for AudioSource {
         None
     }
 }
+*/
