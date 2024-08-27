@@ -4,10 +4,12 @@ use strum_macros::AsRefStr;
 pub type Result<T> = core::result::Result<T, Error>;
 
 pub use crate::audio::error::AudioError;
+pub use crate::gui::error::GuiError;
 
 #[derive(Debug, Clone, AsRefStr)]
 pub enum Error {
-    Audio(AudioError)
+    Audio(AudioError),
+    Gui(GuiError),
 }
 
 impl std::error::Error for Error {}

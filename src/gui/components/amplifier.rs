@@ -1,8 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use iced::widget::{self, column, container, text};
-use iced_audio::{style::knob, FloatRange, Knob, Normal, NormalParam};
-use iced_lazy::Component;
+use crate::gui::widgets::audio_widgets::{style::knob, FloatRange, Knob, Normal, NormalParam};
 
 use crate::{devices::amplifier::Amplifier, math::decibel_to_amplitude};
 

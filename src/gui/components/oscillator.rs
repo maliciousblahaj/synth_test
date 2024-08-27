@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use iced::{widget::{self, column, container, pick_list, row, text}, Element};
-use iced_audio::{knob, FreqRange, Knob, Normal, NormalParam};
+use crate::gui::widgets::audio_widgets::{knob, native::knob::Renderer, FreqRange, Knob, Normal, NormalParam};
 use iced_lazy::Component;
 
 use crate::{devices::oscillator::{self, WaveTableOscillator}, synthesis::{waveforms::WaveForm, wavetable::WaveTable}};
@@ -38,17 +38,29 @@ impl OscillatorUI {
             waveform,
         }
     }
-
-
 }
-/*
 
-    where
-        Renderer: iced_native::text::Renderer + 'static,
-        Renderer::Theme: knob::StyleSheet + widget::text::StyleSheet,
-*/
+/*
+Renderer: iced_native::text::Renderer + 'static,
+Renderer::Theme: knob::StyleSheet + widget::text::StyleSheet,
+    */
 
 impl<Message, Renderer> Component<Message, Renderer> for OscillatorUI
+where
+    Renderer: 
+        iced_native::text::Renderer + 'static,
+    Renderer::Theme:
+        iced::widget::container::StyleSheet +
+        iced::widget::pick_list::StyleSheet +
+        iced::widget::scrollable::StyleSheet,
+    <Renderer as iced_native::Renderer>::Theme: iced::overlay::menu::StyleSheet,
+    <<Renderer as iced_native::Renderer>::Theme as iced::overlay::menu::StyleSheet>::Style: From<<<Renderer as iced_native::Renderer>::Theme as iced::widget::pick_list::StyleSheet>::Style>,
+    /*  iced_audio::knob::StyleSheet +
+        iced::widget::text::StyleSheet +
+        iced::widget::container::StyleSheet + 
+        iced::widget::scrollable::StyleSheet + 
+        iced::overlay::menu::StyleSheet + 
+        iced::widget::pick_list::StyleSheet,*/
 {
     type State = ();
     type Event = OscillatorUIEvent;
@@ -102,10 +114,11 @@ impl<Message, Renderer> Component<Message, Renderer> for OscillatorUI
             .height(100)
             .width(100);
         
-        row![
-            pitch_widget,
-            waveform_widget
-        ].into()
+        //row![
+        //    pitch_widget,
+        //    waveform_widget
+        //].into()
+        pitch_widget.into()
     }
 }
 
@@ -113,6 +126,15 @@ impl<'a, Message, Renderer> From<OscillatorUI>
         for Element<'a, Message, Renderer>
     where
         Message: 'a,
+        Renderer:
+            iced_native::text::Renderer + 'static,
+        /*Renderer::Theme:
+            iced_audio::knob::StyleSheet +
+            iced::widget::text::StyleSheet +
+            iced::widget::container::StyleSheet + 
+            iced::widget::scrollable::StyleSheet + 
+            iced::overlay::menu::StyleSheet + 
+            iced::widget::pick_list::StyleSheet,*/
     {
         fn from(oscillator_ui: OscillatorUI) -> Self {
             iced_lazy::component(oscillator_ui)
