@@ -2,8 +2,8 @@
 //!
 //! [`NormalParam`]: ../core/normal_param/struct.NormalParam.html
 
-use iced::{application::StyleSheet, keyboard, Length};
-use iced_widget::core::renderer;
+use iced::{advanced::{layout, mouse, widget::{tree, Tree}, Clipboard, Layout, Widget}, application::StyleSheet, event, keyboard, mouse::Cursor, touch, Element, Event, Length, Point, Rectangle, Size};
+use iced_widget::core::Shell;
 
 use crate::gui::widgets::audio_widgets::{ModulationRange, Normal, NormalParam};
 
@@ -19,9 +19,9 @@ static DEFAULT_MODIFIER_SCALAR: f32 = 0.02;
 ///
 /// [`NormalParam`]: ../../core/normal_param/struct.NormalParam.html
 #[allow(missing_debug_implementations)]
-pub struct Knob<'a, Message, Theme, Renderer>
+pub struct Knob<'a, Message, Theme> //, Renderer
 where
-    Renderer: renderer::Renderer,
+    Theme: StyleSheet, //Renderer: self::Renderer,
 {
     normal_param: NormalParam,
     size: Length,
@@ -40,9 +40,9 @@ where
     mod_range_2: Option<&'a ModulationRange>,
 }
 
-impl<'a, Message, Theme, Renderer> Knob<'a, Message, Theme, Renderer>
+impl<'a, Message, Theme> Knob<'a, Message, Theme>
 where
-    Renderer: renderer::Renderer,
+    Theme: StyleSheet,
 {
     /// Creates a new [`Knob`].
     ///
@@ -117,7 +117,7 @@ where
     /// [`Knob`]: struct.Knob.html
     pub fn style(
         mut self,
-        style: impl Into<<Theme as StyleSheet>::Style>,
+        style: impl Into<<Renderer::Theme as StyleSheet>::Style>,
     ) -> Self {
         self.style = style.into();
         self
@@ -281,8 +281,8 @@ struct State {
     continuous_normal: f32,
     pressed_modifiers: keyboard::Modifiers,
     last_click: Option<mouse::Click>,
-    tick_marks_cache: crate::graphics::tick_marks::PrimitiveCache,
-    text_marks_cache: crate::graphics::text_marks::PrimitiveCache,
+    tick_marks_cache: super::super::graphics::tick_marks::PrimitiveCache,
+    text_marks_cache: super::super::graphics::text_marks::PrimitiveCache,
 }
 
 impl State {
@@ -307,36 +307,33 @@ impl State {
     }
 }
 
-impl<'a, Message, Renderer> Widget<Message, Renderer>
-    for Knob<'a, Message, Renderer>
+impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+    for Knob<'a, Message, Theme>
 where
-    Renderer: self::Renderer,
-    Renderer::Theme: StyleSheet,
+    Renderer: iced::advanced::Renderer,
+    Theme: StyleSheet,
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
+    }
+
+    fn size(&self) -> iced::Size<Length> {
+        self.size
     }
 
     fn state(&self) -> tree::State {
         tree::State::new(State::new(self.normal_param.value))
     }
 
-    fn width(&self) -> Length {
-        self.size
-    }
-
-    fn height(&self) -> Length {
-        self.size
-    }
-
     fn layout(
         &self,
+        _tree: &mut Tree,
         _renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         let limits = limits.width(self.size).height(self.size);
 
-        let size = limits.resolve(Size::ZERO);
+        let size = limits.resolve(Size::ZERO,Size::ZERO,Size::ZERO); //this is questionable, TODO: check it
 
         layout::Node::new(size)
     }
@@ -346,10 +343,11 @@ where
         state: &mut Tree,
         event: Event,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: Cursor, //cursor_position: Point
         _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
+        _viewport: &Rectangle,
     ) -> event::Status {
         let state = state.state.downcast_mut::<State>();
 
@@ -360,6 +358,8 @@ where
             state.prev_normal = self.normal_param.value;
             state.continuous_normal = self.normal_param.value.as_f32();
         }
+
+        let cursor_position = cursor.into();
 
         match event {
             Event::Mouse(mouse::Event::CursorMoved { .. })
@@ -391,10 +391,10 @@ where
 
                 if layout.bounds().contains(cursor_position) {
                     let lines = match delta {
-                        iced_native::mouse::ScrollDelta::Lines {
+                        mouse::ScrollDelta::Lines {
                             y, ..
                         } => y,
-                        iced_native::mouse::ScrollDelta::Pixels {
+                        mouse::ScrollDelta::Pixels {
                             y, ..
                         } => {
                             if y > 0.0 {
@@ -518,16 +518,16 @@ where
         &self,
         state: &Tree,
         renderer: &mut Renderer,
-        theme: &Renderer::Theme,
-        _style: &iced_native::renderer::Style,
+        theme: &Theme,
+        _style: &iced::advanced::renderer::Style,
         layout: Layout<'_>,
-        cursor_position: Point,
+        cursor: Cursor, //cursor_position: Point, 
         _viewport: &Rectangle,
     ) {
         let state = state.state.downcast_ref::<State>();
         renderer.draw(
             layout.bounds(),
-            cursor_position,
+            cursor,
             self.normal_param.value,
             self.bipolar_center,
             state.dragging_status.is_some(),
@@ -541,6 +541,7 @@ where
             &state.text_marks_cache,
         )
     }
+
 }
 
 /// The renderer of a [`Knob`].
@@ -549,9 +550,7 @@ where
 /// able to use a [`Knob`] in your user interface.
 ///
 /// [`Knob`]: struct.Knob.html
-pub trait Renderer: iced_native::Renderer
-where
-    Self::Theme: StyleSheet,
+pub trait Renderer: iced::advanced::Renderer
 {
     /// Draws a [`Knob`].
     ///
@@ -567,7 +566,7 @@ where
     ///
     /// [`Knob`]: struct.Knob.html
     #[allow(clippy::too_many_arguments)]
-    fn draw(
+    fn draw<Theme: StyleSheet>(
         &mut self,
         bounds: Rectangle,
         cursor_position: Point,
@@ -579,24 +578,24 @@ where
         tick_marks: Option<&tick_marks::Group>,
         text_marks: Option<&text_marks::Group>,
         style_sheet: &dyn StyleSheet<
-            Style = <Self::Theme as StyleSheet>::Style,
+            Style = <Theme as StyleSheet>::Style,
         >,
-        style: &<Self::Theme as StyleSheet>::Style,
+        style: &<Theme as StyleSheet>::Style,
         tick_marks_cache: &crate::tick_marks::PrimitiveCache,
         text_marks_cache: &crate::text_marks::PrimitiveCache,
     );
 }
 
-impl<'a, Message, Renderer> From<Knob<'a, Message, Renderer>>
-    for Element<'a, Message, Renderer>
+impl<'a, Message, Theme, Renderer> From<Knob<'a, Message, Theme>>
+    for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a,
-    Renderer: 'a + self::Renderer,
-    Renderer::Theme: 'a + StyleSheet,
+    Renderer: 'a + iced::advanced::Renderer,
+    Theme: 'a + StyleSheet,
 {
     fn from(
-        knob: Knob<'a, Message, Renderer>,
-    ) -> Element<'a, Message, Renderer> {
+        knob: Knob<'a, Message, Theme>,
+    ) -> Element<'a, Message, Theme, Renderer> {
         Element::new(knob)
     }
 }
