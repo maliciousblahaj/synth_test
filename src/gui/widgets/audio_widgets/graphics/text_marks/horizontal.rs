@@ -1,15 +1,18 @@
-use super::PrimitiveCache;
-use crate::native::text_marks;
-use crate::style::text_marks::{Align, Appearance, Placement};
+use iced::alignment::{Horizontal, Vertical};
+use iced::widget::shader::Primitive;
+use iced::Rectangle;
 
-use iced_core::{alignment::Horizontal, alignment::Vertical, Rectangle};
+//use super::PrimitiveCache;
+use crate::gui::widgets::audio_widgets::native::text_marks;
+use crate::gui::widgets::audio_widgets::style::text_marks::{Align, Style, Placement};
+
 
 fn draw_aligned(
     primitives: &mut Vec<Primitive>,
     bounds: &Rectangle,
     y: f32,
     text_marks: &text_marks::Group,
-    style: &Appearance,
+    style: &Style,
     inverse: bool,
     align: Vertical,
 ) {
@@ -68,10 +71,10 @@ fn draw_aligned(
 pub fn draw_horizontal_text_marks(
     bounds: &Rectangle,
     text_marks: &text_marks::Group,
-    style: &Appearance,
+    style: &Style,
     placement: &Placement,
     inverse: bool,
-    cache: &PrimitiveCache,
+    //cache: &PrimitiveCache,
 ) -> Primitive {
     cache.cached_linear(
         *bounds,

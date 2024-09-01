@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = { version = "0.12.1", features = ["advanced"] }
+iced = { git = "https://github.com/iced-rs/iced.git", features = ["advanced", "canvas", "lazy"] } #0.13.0-dev
+#iced_wgpu = { git = "https://github.com/iced-rs/iced.git" }
 rodio = "0.19"
 strum_macros = "0.26.4"
-iced_widget = { version = "0.12.3", features = ["canvas"] }
+cpal = { path="../cpal" } #for fixing breaking changes with web-sys patch

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Arc};
+//use std::{cell::RefCell, sync::Arc};
 
 pub use super::super::native::text_marks::*;
 pub use super::super::style::text_marks::*;
@@ -8,17 +8,21 @@ mod radial;
 mod vertical;
 
 pub use horizontal::*;
-use iced::{Point, Rectangle};
 pub use radial::*;
 pub use vertical::*;
 
+
+//use iced::{Point, Rectangle};
+
+
+/*
 #[derive(Clone)]
 struct PrimitiveCacheData {
-    pub cache: Arc<iced_graphics::Primitive>,
+    //pub cache: Arc<iced_graphics::Primitive>,
 
     pub bounds: Rectangle,
     pub text_marks_hash: u64,
-    pub style: Appearance,
+    pub style: Style,
     pub placement: Placement,
     pub inverse: bool,
 
@@ -31,11 +35,11 @@ struct PrimitiveCacheData {
 impl Default for PrimitiveCacheData {
     fn default() -> Self {
         Self {
-            cache: Arc::new(iced_graphics::Primitive::None),
+            //cache: Arc::new(iced_graphics::Primitive::None),
 
             bounds: Rectangle::default(),
             text_marks_hash: 0,
-            style: Appearance::default(),
+            style: Style::default(),
             placement: Placement::default(),
             inverse: false,
 
@@ -61,15 +65,15 @@ pub struct PrimitiveCache {
 
 impl PrimitiveCache {
     /// Cache and retrieve linear text marks.
-    pub fn cached_linear<F: Fn() -> iced_graphics::Primitive>(
+    pub fn cached_linear<F: Fn() -> iced::widget::shader::Primitive>(
         &self,
         bounds: Rectangle,
         text_marks: &Group,
-        style: Appearance,
+        style: Style,
         placement: Placement,
         inverse: bool,
         builder: F,
-    ) -> iced_graphics::Primitive {
+    ) -> iced::widget::shader::Primitive {
         let mut data = self.data.borrow_mut();
 
         if !(data.bounds == bounds
@@ -87,24 +91,24 @@ impl PrimitiveCache {
             data.cache = Arc::new(builder());
         }
 
-        iced_graphics::Primitive::Cached {
+        iced::widget::shader::Primitive::Cached {
             cache: Arc::clone(&data.cache),
         }
     }
 
     /// Cache and retrieve radial text marks.
     #[allow(clippy::too_many_arguments)]
-    pub fn cached_radial<F: Fn() -> iced_graphics::Primitive>(
+    pub fn cached_radial<F: Fn() -> iced::widget::shader::Primitive>(
         &self,
         center: Point,
         radius: f32,
         start_angle: f32,
         angle_span: f32,
         text_marks: &Group,
-        style: Appearance,
+        style: Style,
         inverse: bool,
         builder: F,
-    ) -> iced_graphics::Primitive {
+    ) -> iced::widget::shader::Primitive {
         let mut data = self.data.borrow_mut();
 
         if !(data.center == center
@@ -126,7 +130,7 @@ impl PrimitiveCache {
             data.cache = Arc::new(builder());
         }
 
-        iced_graphics::Primitive::Cached {
+        iced::widget::shader::Primitive::Cached {
             cache: Arc::clone(&data.cache),
         }
     }
@@ -139,3 +143,4 @@ impl Default for PrimitiveCache {
         }
     }
 }
+*/

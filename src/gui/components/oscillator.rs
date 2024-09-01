@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use iced::{widget::{self, column, container, pick_list, row, text}, Element};
-use crate::gui::widgets::audio_widgets::{knob, native::knob::Renderer, FreqRange, Knob, Normal, NormalParam};
-use iced_lazy::Component;
+use iced::{widget::{column, container, pick_list, text, Component, component}, Element};
+use crate::gui::widgets::audio_widgets::{knob::{self, Knob}, style::knob::Catalog, FreqRange, Normal, NormalParam};
 
-use crate::{devices::oscillator::{self, WaveTableOscillator}, synthesis::{waveforms::WaveForm, wavetable::WaveTable}};
+use crate::synthesis::wavetable::WaveTable;
+use crate::{devices::oscillator::WaveTableOscillator, synthesis::waveforms::WaveForm};
 
 
 #[derive(Clone, Copy, Debug)]
@@ -42,25 +42,19 @@ impl OscillatorUI {
 
 /*
 Renderer: iced_native::text::Renderer + 'static,
-Renderer::Theme: knob::StyleSheet + widget::text::StyleSheet,
+Renderer::Theme: knob::Catalog + widget::text::Catalog,
     */
 
-impl<Message, Renderer> Component<Message, Renderer> for OscillatorUI
+impl<Message, Theme> Component<Message, Theme> for OscillatorUI
 where
-    Renderer: 
-        iced_native::text::Renderer + 'static,
-    Renderer::Theme:
-        iced::widget::container::StyleSheet +
-        iced::widget::pick_list::StyleSheet +
-        iced::widget::scrollable::StyleSheet,
-    <Renderer as iced_native::Renderer>::Theme: iced::overlay::menu::StyleSheet,
-    <<Renderer as iced_native::Renderer>::Theme as iced::overlay::menu::StyleSheet>::Style: From<<<Renderer as iced_native::Renderer>::Theme as iced::widget::pick_list::StyleSheet>::Style>,
-    /*  iced_audio::knob::StyleSheet +
-        iced::widget::text::StyleSheet +
-        iced::widget::container::StyleSheet + 
-        iced::widget::scrollable::StyleSheet + 
-        iced::overlay::menu::StyleSheet + 
-        iced::widget::pick_list::StyleSheet,*/
+    Theme: 
+        Catalog + iced::advanced::widget::text::Catalog
+    /*  iced_audio::knob::Catalog +
+        iced::widget::text::Catalog +
+        iced::widget::container::Catalog + 
+        iced::widget::scrollable::Catalog + 
+        iced::overlay::menu::Catalog + 
+        iced::widget::pick_list::Catalog,*/
 {
     type State = ();
     type Event = OscillatorUIEvent;
@@ -85,7 +79,7 @@ where
         None
     }
 
-    fn view(&self, state: &Self::State) -> iced_native::Element<'_, Self::Event, Renderer> {
+    fn view(&self, state: &Self::State) -> Element<'_, Self::Event, Theme> {
         let pitch_knob = Knob::new(
             self.pitch_param,
             OscillatorUIEvent::PitchChanged
@@ -127,7 +121,7 @@ impl<'a, Message, Renderer> From<OscillatorUI>
     where
         Message: 'a,
         Renderer:
-            iced_native::text::Renderer + 'static,
+            iced::advanced::text::Renderer + 'static,
         /*Renderer::Theme:
             iced_audio::knob::StyleSheet +
             iced::widget::text::StyleSheet +
@@ -137,6 +131,6 @@ impl<'a, Message, Renderer> From<OscillatorUI>
             iced::widget::pick_list::StyleSheet,*/
     {
         fn from(oscillator_ui: OscillatorUI) -> Self {
-            iced_lazy::component(oscillator_ui)
+            component(oscillator_ui)
         }
     }

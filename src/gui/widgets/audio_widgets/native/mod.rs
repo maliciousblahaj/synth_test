@@ -1,7 +1,7 @@
 pub mod knob;
 
-pub mod tick_marks;
-pub mod text_marks;
+//pub mod tick_marks;
+//pub mod text_marks;
 
 /// Moved status for the virtual sliders.
 ///

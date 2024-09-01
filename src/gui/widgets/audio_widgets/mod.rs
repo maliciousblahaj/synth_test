@@ -30,3 +30,5 @@ mod platform {
 
 #[doc(no_inline)]
 pub use platform::*;
+
+use iced::Renderer;

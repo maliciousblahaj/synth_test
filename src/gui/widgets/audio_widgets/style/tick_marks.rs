@@ -66,9 +66,9 @@ impl std::default::Default for Placement {
     }
 }
 
-/// The appearance of a tick mark
+/// The Style of a tick mark
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Appearance {
+pub struct Style {
     /// The style of a tier 1 tick mark.
     pub tier_1: Shape,
     /// The style of a tier 2 tick mark.
@@ -103,7 +103,7 @@ pub enum Shape {
     },
 }
 
-impl Default for Appearance {
+impl Default for Style {
     fn default() -> Self {
         Self {
             tier_1: Shape::Line {

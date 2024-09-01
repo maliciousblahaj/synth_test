@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
-use iced::widget::{self, column, container, text};
-use crate::gui::widgets::audio_widgets::{style::knob, FloatRange, Knob, Normal, NormalParam};
-
+use iced::widget::{column, container, text, Component};
+use iced::Element;
+use crate::gui::widgets::audio_widgets::knob::Knob;
+use crate::gui::widgets::audio_widgets::{style::knob, FloatRange, Normal, NormalParam};
 use crate::{devices::amplifier::Amplifier, math::decibel_to_amplitude};
 
 
@@ -35,10 +36,9 @@ impl AmplifierUI {
     }
 }
 
-impl<Message, Renderer> Component<Message, Renderer> for AmplifierUI
+impl<Message, Theme> Component<Message, Theme> for AmplifierUI
     where
-        Renderer: iced_native::text::Renderer + 'static,
-        Renderer::Theme: knob::StyleSheet + widget::text::StyleSheet,
+        Theme: knob::Catalog + iced::widget::text::Catalog,
 {
     type State = ();
     type Event = AmplifierUIEvent;
@@ -62,7 +62,7 @@ impl<Message, Renderer> Component<Message, Renderer> for AmplifierUI
         None
     }
 
-    fn view(&self, state: &Self::State) -> iced_native::Element<'_, Self::Event, Renderer> {
+    fn view(&self, state: &Self::State) -> Element<'_, Self::Event, Theme> {
         let gain_knob = Knob::new(
             self.gain_param,
             AmplifierUIEvent::GainChanged,

@@ -2,12 +2,11 @@
 //!
 //! [`NormalParam`]: ../core/normal_param/struct.NormalParam.html
 
-use iced::{advanced::{layout, mouse, widget::{tree, Tree}, Clipboard, Layout, Widget}, application::StyleSheet, event, keyboard, mouse::Cursor, touch, Element, Event, Length, Point, Rectangle, Size};
-use iced_widget::core::Shell;
+use iced::{advanced::{layout, mouse, widget::{tree, Tree}, Clipboard, Layout, Shell, Widget}, event::{self, Status}, keyboard, mouse::Cursor, touch, Element, Event, Length, Point, Rectangle, Size};
 
-use crate::gui::widgets::audio_widgets::{ModulationRange, Normal, NormalParam};
+use crate::gui::widgets::audio_widgets::{style::knob::{Catalog, Style, StyleFn}, ModulationRange, Normal, NormalParam};
 
-use super::{text_marks, tick_marks, SliderStatus};
+use super::SliderStatus;
 
 
 static DEFAULT_SIZE: f32 = 30.0;
@@ -19,9 +18,9 @@ static DEFAULT_MODIFIER_SCALAR: f32 = 0.02;
 ///
 /// [`NormalParam`]: ../../core/normal_param/struct.NormalParam.html
 #[allow(missing_debug_implementations)]
-pub struct Knob<'a, Message, Theme> //, Renderer
+pub struct Knob<'a, Message, Theme = iced::Theme> //, Renderer
 where
-    Theme: StyleSheet, //Renderer: self::Renderer,
+    Theme: Catalog, //Renderer: self::Renderer,
 {
     normal_param: NormalParam,
     size: Length,
@@ -33,16 +32,16 @@ where
     modifier_scalar: f32,
     modifier_keys: keyboard::Modifiers,
     bipolar_center: Option<Normal>,
-    style: <Theme as StyleSheet>::Style,
-    tick_marks: Option<&'a tick_marks::Group>,
-    text_marks: Option<&'a text_marks::Group>,
+    class: Theme::Class,
+    //tick_marks: Option<&'a tick_marks::Group>,
+    //text_marks: Option<&'a text_marks::Group>,
     mod_range_1: Option<&'a ModulationRange>,
     mod_range_2: Option<&'a ModulationRange>,
 }
 
 impl<'a, Message, Theme> Knob<'a, Message, Theme>
 where
-    Theme: StyleSheet,
+    Theme: Catalog,
 {
     /// Creates a new [`Knob`].
     ///
@@ -67,9 +66,9 @@ where
             modifier_scalar: DEFAULT_MODIFIER_SCALAR,
             modifier_keys: keyboard::Modifiers::CTRL,
             bipolar_center: None,
-            style: Default::default(),
-            tick_marks: None,
-            text_marks: None,
+            class: Default::default(),
+            //tick_marks: None,
+            //text_marks: None,
             mod_range_1: None,
             mod_range_2: None,
         }
@@ -117,9 +116,9 @@ where
     /// [`Knob`]: struct.Knob.html
     pub fn style(
         mut self,
-        style: impl Into<<Renderer::Theme as StyleSheet>::Style>,
+        style: impl Fn(&Theme, Status) -> Style + 'a,
     ) -> Self {
-        self.style = style.into();
+        self.class = (Box::new(style) as StyleFn<'a, Theme>).into();
         self
     }
 
@@ -175,6 +174,7 @@ where
         self
     }
 
+    /*
     /// Sets the tick marks to display. Note your [`StyleSheet`] must
     /// also implement `tick_marks_style(&self) -> Option<tick_marks::Style>` for
     /// them to display (which the default style does).
@@ -194,6 +194,7 @@ where
         self.text_marks = Some(text_marks);
         self
     }
+    */
 
     /// Sets a [`ModulationRange`] to display. Note your [`StyleSheet`] must
     /// also implement `mod_range_style(&self) -> Option<ModRangeStyle>` for
@@ -281,8 +282,8 @@ struct State {
     continuous_normal: f32,
     pressed_modifiers: keyboard::Modifiers,
     last_click: Option<mouse::Click>,
-    tick_marks_cache: super::super::graphics::tick_marks::PrimitiveCache,
-    text_marks_cache: super::super::graphics::text_marks::PrimitiveCache,
+    //tick_marks_cache: super::super::graphics::tick_marks::PrimitiveCache,
+    //text_marks_cache: super::super::graphics::text_marks::PrimitiveCache,
 }
 
 impl State {
@@ -301,17 +302,17 @@ impl State {
             continuous_normal: normal.as_f32(),
             pressed_modifiers: Default::default(),
             last_click: None,
-            tick_marks_cache: Default::default(),
-            text_marks_cache: Default::default(),
+            //tick_marks_cache: Default::default(),
+            //text_marks_cache: Default::default(),
         }
     }
 }
 
-impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
+impl<'a, Message, Theme> Widget<Message, Theme, iced::Renderer>
     for Knob<'a, Message, Theme>
 where
-    Renderer: iced::advanced::Renderer,
-    Theme: StyleSheet,
+    //Renderer: iced::advanced::Renderer,
+    Theme: Catalog,
 {
     fn tag(&self) -> tree::Tag {
         tree::Tag::of::<State>()
@@ -328,7 +329,7 @@ where
     fn layout(
         &self,
         _tree: &mut Tree,
-        _renderer: &Renderer,
+        _renderer: &iced::Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         let limits = limits.width(self.size).height(self.size);
@@ -344,7 +345,7 @@ where
         event: Event,
         layout: Layout<'_>,
         cursor: Cursor, //cursor_position: Point
-        _renderer: &Renderer,
+        _renderer: &iced::Renderer,
         _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
@@ -517,7 +518,7 @@ where
     fn draw(
         &self,
         state: &Tree,
-        renderer: &mut Renderer,
+        renderer: &mut iced::Renderer,
         theme: &Theme,
         _style: &iced::advanced::renderer::Style,
         layout: Layout<'_>,
@@ -533,24 +534,25 @@ where
             state.dragging_status.is_some(),
             self.mod_range_1,
             self.mod_range_2,
-            self.tick_marks,
-            self.text_marks,
+            //self.tick_marks,
+            //self.text_marks,
             theme,
-            &self.style,
-            &state.tick_marks_cache,
-            &state.text_marks_cache,
+            &self.class,
+            //&state.tick_marks_cache,
+            //&state.text_marks_cache,
         )
     }
 
 }
 
+/*
 /// The renderer of a [`Knob`].
 ///
 /// Your renderer will need to implement this trait before being
 /// able to use a [`Knob`] in your user interface.
 ///
 /// [`Knob`]: struct.Knob.html
-pub trait Renderer: iced::advanced::Renderer
+pub trait Renderer: iced::advanced::Renderer //+ iced::advanced::graphics::geometry::Renderer
 {
     /// Draws a [`Knob`].
     ///
@@ -566,7 +568,7 @@ pub trait Renderer: iced::advanced::Renderer
     ///
     /// [`Knob`]: struct.Knob.html
     #[allow(clippy::too_many_arguments)]
-    fn draw<Theme: StyleSheet>(
+    fn draw<Theme: Catalog>(
         &mut self,
         bounds: Rectangle,
         cursor_position: Point,
@@ -575,14 +577,14 @@ pub trait Renderer: iced::advanced::Renderer
         dragging_status: bool,
         mod_range_1: Option<&ModulationRange>,
         mod_range_2: Option<&ModulationRange>,
-        tick_marks: Option<&tick_marks::Group>,
-        text_marks: Option<&text_marks::Group>,
-        style_sheet: &dyn StyleSheet<
-            Style = <Theme as StyleSheet>::Style,
+        //tick_marks: Option<&tick_marks::Group>,
+        //text_marks: Option<&text_marks::Group>,
+        catalog: &dyn Catalog<
+            Class = fn(&Theme, Status) -> Style,
         >,
-        style: &<Theme as StyleSheet>::Style,
-        tick_marks_cache: &crate::tick_marks::PrimitiveCache,
-        text_marks_cache: &crate::text_marks::PrimitiveCache,
+        style: &fn(&Theme, Status) -> Style,
+        //tick_marks_cache: &crate::tick_marks::PrimitiveCache,
+        //text_marks_cache: &crate::text_marks::PrimitiveCache,
     );
 }
 
@@ -591,7 +593,7 @@ impl<'a, Message, Theme, Renderer> From<Knob<'a, Message, Theme>>
 where
     Message: 'a,
     Renderer: 'a + iced::advanced::Renderer,
-    Theme: 'a + StyleSheet,
+    Theme: 'a + Catalog,
 {
     fn from(
         knob: Knob<'a, Message, Theme>,
@@ -599,3 +601,4 @@ where
         Element::new(knob)
     }
 }
+*/
