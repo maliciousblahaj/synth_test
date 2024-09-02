@@ -1,9 +1,11 @@
 use std::sync::{Arc, Mutex};
 
-use iced::widget::{column, container, text, Component};
+use iced::widget::{column, component, container, text, Component};
 use iced::Element;
-use crate::gui::widgets::audio_widgets::knob::Knob;
-use crate::gui::widgets::audio_widgets::{style::knob, FloatRange, Normal, NormalParam};
+use crate::gui::widgets::core::normal::Normal;
+use crate::gui::widgets::core::normal_param::NormalParam;
+use crate::gui::widgets::core::range::LogDBRange;
+use crate::gui::widgets::knob::Knob;
 use crate::{devices::amplifier::Amplifier, math::decibel_to_amplitude};
 
 
@@ -15,7 +17,7 @@ pub enum AmplifierUIEvent {
 pub struct AmplifierUI {
     amplifier: Arc<Mutex<Box<Amplifier>>>,
 
-    gain_range: FloatRange,
+    gain_range: LogDBRange,
     gain_param: NormalParam,
 }
 
@@ -25,7 +27,7 @@ impl AmplifierUI {
         let gain = guard.get_amplitude();
         drop(guard);
 
-        let gain_range = FloatRange::new(-50.0, 0.0);
+        let gain_range = LogDBRange::new(-56.0, 0.0, Normal::from_clipped(0.7));
 
         Self {
             amplifier,
@@ -36,9 +38,11 @@ impl AmplifierUI {
     }
 }
 
-impl<Message, Theme> Component<Message, Theme> for AmplifierUI
+impl<Message> Component<Message> for AmplifierUI
     where
-        Theme: knob::Catalog + iced::widget::text::Catalog,
+        //Theme: 
+        //iced::widget::container::Catalog +
+        //iced::widget::text::Catalog,
 {
     type State = ();
     type Event = AmplifierUIEvent;
@@ -62,7 +66,7 @@ impl<Message, Theme> Component<Message, Theme> for AmplifierUI
         None
     }
 
-    fn view(&self, state: &Self::State) -> Element<'_, Self::Event, Theme> {
+    fn view(&self, _state: &Self::State) -> Element<'_, Self::Event> {
         let gain_knob = Knob::new(
             self.gain_param,
             AmplifierUIEvent::GainChanged,
@@ -73,7 +77,7 @@ impl<Message, Theme> Component<Message, Theme> for AmplifierUI
                 text("gain"),
                 gain_knob,
                 text(format!("{:.1}db", self.gain_range.unmap_to_value(self.gain_param.value)))
-            ].align_items(iced::Alignment::Center)
+            ].align_x(iced::Alignment::Center)
         )
             .align_x(iced::alignment::Horizontal::Center)
             .align_y(iced::alignment::Vertical::Center)
@@ -81,5 +85,11 @@ impl<Message, Theme> Component<Message, Theme> for AmplifierUI
             .width(100);
 
         gain_widget.into()
+    }
+}
+
+impl<'a, Message: 'a> From<AmplifierUI> for Element<'a, Message> {
+    fn from(amplifier_ui: AmplifierUI) -> Self {
+        component(amplifier_ui)
     }
 }

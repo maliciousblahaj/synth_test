@@ -1,7 +1,3 @@
-use std::{sync::{Arc, Mutex}, time::Duration};
-
-use rodio::Source;
-
 pub mod gui;
 pub mod devices;
 pub mod error;

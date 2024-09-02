@@ -1,9 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use iced::{widget::{column, container, pick_list, text, Component, component}, Element};
-use crate::gui::widgets::audio_widgets::{knob::{self, Knob}, style::knob::Catalog, FreqRange, Normal, NormalParam};
+use iced::{widget::{column, row, container, pick_list, text, Component, component}, Element};
 
-use crate::synthesis::wavetable::WaveTable;
+use crate::{gui::widgets::{core::{normal::Normal, normal_param::NormalParam, range::FreqRange}, knob::Knob}, synthesis::wavetable::WaveTable};
 use crate::{devices::oscillator::WaveTableOscillator, synthesis::waveforms::WaveForm};
 
 
@@ -45,10 +44,7 @@ Renderer: iced_native::text::Renderer + 'static,
 Renderer::Theme: knob::Catalog + widget::text::Catalog,
     */
 
-impl<Message, Theme> Component<Message, Theme> for OscillatorUI
-where
-    Theme: 
-        Catalog + iced::advanced::widget::text::Catalog
+impl<Message> Component<Message> for OscillatorUI
     /*  iced_audio::knob::Catalog +
         iced::widget::text::Catalog +
         iced::widget::container::Catalog + 
@@ -79,7 +75,7 @@ where
         None
     }
 
-    fn view(&self, state: &Self::State) -> Element<'_, Self::Event, Theme> {
+    fn view(&self, _state: &Self::State) -> Element<'_, Self::Event> {
         let pitch_knob = Knob::new(
             self.pitch_param,
             OscillatorUIEvent::PitchChanged
@@ -89,7 +85,7 @@ where
                 text("pitch"),
                 pitch_knob,
                 text(format!("{:.1}hz", self.pitch_range.unmap_to_value(self.pitch_param.value)))
-            ].align_items(iced::Alignment::Center)
+            ].align_x(iced::Alignment::Center)
         )
             .align_x(iced::alignment::Horizontal::Center)
             .align_y(iced::alignment::Vertical::Center)
@@ -108,29 +104,16 @@ where
             .height(100)
             .width(100);
         
-        //row![
-        //    pitch_widget,
-        //    waveform_widget
-        //].into()
-        pitch_widget.into()
+        row![
+            pitch_widget,
+            waveform_widget
+        ].into()
+        //pitch_widget.into()
     }
 }
 
-impl<'a, Message, Renderer> From<OscillatorUI>
-        for Element<'a, Message, Renderer>
-    where
-        Message: 'a,
-        Renderer:
-            iced::advanced::text::Renderer + 'static,
-        /*Renderer::Theme:
-            iced_audio::knob::StyleSheet +
-            iced::widget::text::StyleSheet +
-            iced::widget::container::StyleSheet + 
-            iced::widget::scrollable::StyleSheet + 
-            iced::overlay::menu::StyleSheet + 
-            iced::widget::pick_list::StyleSheet,*/
-    {
-        fn from(oscillator_ui: OscillatorUI) -> Self {
-            component(oscillator_ui)
-        }
+impl<'a, Message: 'a> From<OscillatorUI> for Element<'a, Message> {
+    fn from(oscillator_ui: OscillatorUI) -> Self {
+        component(oscillator_ui)
     }
+}

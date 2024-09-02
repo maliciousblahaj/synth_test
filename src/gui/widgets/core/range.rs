@@ -36,7 +36,7 @@ impl FloatRange {
     pub fn normal_param(&self, value: f32, default: f32) -> NormalParam {
         NormalParam {
             value: self.map_to_normal(value),
-            default
+            default: self.map_to_normal(default),
         }
     }
 
@@ -92,7 +92,7 @@ impl IntRange {
     pub fn normal_param(&self, value: i32, default: i32) -> NormalParam {
         NormalParam {
             value: self.map_to_normal(value),
-            default
+            default: self.map_to_normal(default),
         }
     }
 
@@ -174,7 +174,7 @@ impl LogDBRange {
     pub fn normal_param(&self, value: f32, default: f32) -> NormalParam {
         NormalParam {
             value: self.map_to_normal(value),
-            default,
+            default: self.map_to_normal(default),
         }
     }
 
@@ -223,7 +223,7 @@ impl LogDBRange {
                 return self.max;
             }
             let pos_normal = (normal.as_f32() - self.zero_position.as_f32())
-                * self.one_min_zero_pos_recip;
+                * self.one_minus_zero_position_recip;
 
             let log_normal = pos_normal * pos_normal;
 
@@ -291,7 +291,7 @@ impl FreqRange {
     pub fn normal_param(&self, value: f32, default: f32) -> NormalParam {
         NormalParam {
             value: self.map_to_normal(value),
-            default
+            default: self.map_to_normal(default),
         }
     }
 

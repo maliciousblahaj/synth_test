@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
-use iced::{executor, widget::{column, row}, Element, Theme};
-
-use crate::{devices::{amplifier::Amplifier, oscillator::WaveTableOscillator}};
+use iced::Element;
+use iced::widget::{row, column};
+use crate::devices::{amplifier::Amplifier, oscillator::WaveTableOscillator};
 
 use super::components::{amplifier::AmplifierUI, oscillator::OscillatorUI};
 
@@ -29,17 +29,14 @@ impl SynthesizerUI {
         }
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
-        Command::none()
-    }
-
     fn view(&self) -> Element<Message> {
+        let oscillators_ui: Vec<Element<Message>> = 
+            self.oscillators_ui.iter()
+                .map(|ui| (ui.clone()).into()).collect();
         row![
             self.amplifier_ui,
+            column(oscillators_ui),
+
         ].into()
-    }
-    
-    fn title(&self) -> String {
-        String::from("Synthesizer")
     }
 }

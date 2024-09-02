@@ -14,7 +14,6 @@ impl Normal {
     pub const CENTER: Self = Self { value: 0.5 };
     pub const MAX: Self = Self { value: 1.0 };
 
-    #[inline]
     pub fn from_clipped(value: f32) -> Self {
         Self {
             value: {
@@ -30,14 +29,16 @@ impl Normal {
     }
 
 
-    #[inline]
     pub fn set_clipped(&mut self, value: f32) {
         *self = Normal::from_clipped(value)
     }
 
-    #[inline]
     pub fn as_f32(&self) -> f32 {
         self.value
+    }
+
+    pub fn scale(&self, scalar: f32) -> f32 {
+        self.value * scalar
     }
 }
 

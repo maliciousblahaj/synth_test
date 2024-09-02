@@ -1,8 +1,8 @@
-use iced::{advanced::{graphics::core::{event, touch}, layout, mouse, renderer::Quad, Shell, Widget}, border, Background, Border, Color, Event, Length, Rectangle, Shadow, Size};
+use iced::{advanced::{graphics::core::{event, touch}, layout, mouse, renderer::Quad, Shell, Widget}, border::Radius, Background, Border, Color, Element, Event, Length, Rectangle, Shadow, Size};
 
 use super::core::{knob_angle_range::KnobAngleRange, math, normal::Normal, normal_param::NormalParam, slider_status::SliderStatus};
 
-const RADIUS: f32 = 64;
+const RADIUS: f32 = 64.0;
 const BACKGROUND_COLOR: Color = Color::from_rgb(0.97, 0.97, 0.97);
 const DEFAULT_SCALAR: f32 = 0.00385;
 const BORDER_COLOR: Color = Color::from_rgb(0.315, 0.315, 0.315);
@@ -23,7 +23,7 @@ pub struct Knob<Message> {
 }
 
 impl<Message> Knob<Message> {
-    pub fn new<F: Fn(Normal) -> Message>(normal_param: NormalParam, on_change: F) -> Self {
+    pub fn new<F: 'static + Fn(Normal) -> Message>(normal_param: NormalParam, on_change: F) -> Self {
         Self {
             normal_param,
             on_change: Box::new(on_change),
@@ -35,14 +35,14 @@ impl<Message> Knob<Message> {
         }
     }
 
-    fn move_virtual_slider(&mut self, state: &mut KnobState, mut normal_delta: f32) -> SliderStatus {
+    fn move_virtual_slider(&mut self, state: &mut KnobState, normal_delta: f32) -> SliderStatus {
         if normal_delta.abs() < f32::EPSILON {
             return SliderStatus::Unchanged;
         }
 
         //why isn't it current_normal + normaldelta??
-        self.normal_param.value.set_clipped(state.current_normal - normal_delta);
-        state.current_normal = self.normal_param.value.as_f32();
+        self.normal_param.value.set_clipped(state.current_normal.as_f32() - normal_delta);
+        state.current_normal = self.normal_param.value;
 
         SliderStatus::Moved
     }
@@ -76,7 +76,7 @@ impl KnobState {
 }
 
 
-impl<Renderer, Theme, Message> Widget for Knob
+impl<Message, Theme, Renderer> Widget<Message, Theme, Renderer> for Knob<Message>
 where 
     Renderer: iced::advanced::Renderer,
 {
@@ -91,22 +91,22 @@ where
     //basically how big it's going to be
     fn layout(
         &self,
-        tree: &mut iced::advanced::widget::Tree,
-        renderer: &Renderer,
-        limits: &layout::Limits,
+        _tree: &mut iced::advanced::widget::Tree,
+        _renderer: &Renderer,
+        _limits: &layout::Limits,
     ) -> layout::Node {
         layout::Node::new(Size::new(self.radius*2.0, self.radius*2.0))
     }
 
     fn draw(
         &self,
-        tree: &iced::advanced::widget::Tree,
+        _tree: &iced::advanced::widget::Tree,
         renderer: &mut Renderer,
-        theme: &Theme,
-        style: &iced::advanced::renderer::Style,
+        _theme: &Theme,
+        _style: &iced::advanced::renderer::Style,
         layout: iced::advanced::Layout<'_>,
-        cursor: iced::advanced::mouse::Cursor,
-        viewport: &iced::Rectangle,
+        _cursor: iced::advanced::mouse::Cursor,
+        _viewport: &iced::Rectangle,
     ) {
         let angle_range = KnobAngleRange::default();
 
@@ -156,7 +156,7 @@ where
             border: Border {
                 color: BORDER_COLOR,
                 width: BORDER_WIDTH,
-                radius: [radius; 4],
+                radius: Radius::new(radius),
             },
             shadow: Shadow::default(),
         };
@@ -179,7 +179,7 @@ where
         let offset_radius = radius - NOTCH_RELATIVE_OFFSET * bounds.width;
 
         let border = Border {
-            radius: [notch_radius; 4],
+            radius: Radius::new(notch_radius),
             width: BORDER_WIDTH,
             color: BORDER_COLOR,
         };
@@ -195,7 +195,7 @@ where
             border: border,
             shadow: Shadow::default(),
         };
-        renderer.fill_quad(quad, Background::Color(style.color));
+        renderer.fill_quad(quad, Background::Color(BACKGROUND_COLOR));
     }
 
     fn on_event(
@@ -246,13 +246,13 @@ where
                     let click = mouse::Click::new(cursor_position, state.previous_click);
 
                     match click.kind() {
-                        mouse::Click::Single => {
+                        mouse::click::Kind::Single => {
                             state.dragging_status = Some(Default::default());
                             state.previous_drag_y = cursor_position.y;
                         },
                         _ => {
                             //if right click, reset to default
-                            let previous_dragging_status = state.dragging_status.take();
+                            let _previous_dragging_status = state.dragging_status.take();
                             
                             if self.normal_param.value != self.normal_param.default {
                                 self.normal_param.value = self.normal_param.default;
@@ -267,7 +267,7 @@ where
             Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerLifted { .. })
             | Event::Touch(touch::Event::FingerLost { .. }) => {
-                if let Some(slider_status) = state.dragging_status.take() {
+                if let Some(_slider_status) = state.dragging_status.take() {
                     return event::Status::Captured;
                 }
             }
@@ -276,3 +276,18 @@ where
         event::Status::Ignored
     }
 }
+
+
+impl<'a, Message: 'a, Theme, Renderer> From<Knob<Message>> for Element<'a, Message, Theme, Renderer> 
+    where Renderer: iced::advanced::Renderer,
+{
+    fn from(knob: Knob<Message>) -> Self {
+        Element::new(knob)
+    }
+}
+
+/*    fn from(
+        knob: Knob<'a, Message, Theme>,
+    ) -> Element<'a, Message, Theme, Renderer> {
+        Element::new(knob)
+    } */
