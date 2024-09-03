@@ -12,6 +12,7 @@ pub enum OscillatorUIEvent {
     WaveFormSelected(WaveForm),
 }
 
+#[derive(Clone, Debug)]
 pub struct OscillatorUI {
     oscillator: Arc<Mutex<Box<WaveTableOscillator>>>,
 

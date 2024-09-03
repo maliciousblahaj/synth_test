@@ -1,5 +1,6 @@
 use crate::audio::graph::{render_nodes, AudioDevice, AudioNode};
 
+#[derive(Clone, Debug)]
 pub struct Amplifier {
     amplitude: f32,
 }
@@ -21,7 +22,7 @@ impl Amplifier {
 }
 
 impl AudioDevice for Amplifier {
-    fn render(&mut self, children: &Vec<AudioNode>, time: u64) -> f32 {
+    fn render(&self, children: &Vec<AudioNode>, time: u64) -> f32 {
         let input = render_nodes(children, time);
         input * self.amplitude 
     }

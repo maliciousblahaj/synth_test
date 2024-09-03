@@ -1,27 +1,49 @@
 use std::{error::Error, sync::{Arc, Mutex}};
 
-use iced::{Application, Settings};
-use rodio::{OutputStream, Source};
-use wavetable_synthesizer::{gui::{Flags, SynthesizerUI}, synthesis::{waveforms::{saw, square, WaveForm}, Synthesizer, WaveTable, WaveTableOscillator}, AudioSource};
+use iced::Settings;
+use rodio::OutputStream;
+use wavetable_synthesizer::{audio::graph::{AudioDevice, AudioGraph, AudioNode}, devices::{amplifier::Amplifier, oscillator::{self, WaveTableOscillator}}, gui::synthesizer::SynthesizerUI, synthesis::{waveforms::WaveForm, wavetable::WaveTable}};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let sample_rate = 48000;
+    let sample_rate = Arc::new(48000);
     let base_frequency = 50.0;
 
     let wavetable = WaveTable::from_fn(WaveForm::Square.get_fn(), 128);
 
     let oscillator_blueprint = WaveTableOscillator::new(sample_rate, wavetable);
 
-    let mut oscillators = Vec::new();
+    let mut oscillators: Vec<Arc<Mutex<Box<dyn AudioDevice>>>> = Vec::new();
     for i in 1..=1 {
         let mut osc = oscillator_blueprint.clone();
         osc.set_frequency(base_frequency*(i as f32));
-        oscillators.push(osc)
+        oscillators.push(Arc::new(Mutex::new(Box::new(osc))));
     }
 
-    let mut synth = Synthesizer::new(sample_rate, oscillators);
-    synth.set_gain(-20.0);
-    let synth = Arc::new(Mutex::new(synth));
+    let mut amplifier = Arc::new(Mutex::new(Box::new(
+        Amplifier::new(0.7)
+    )));
+
+    
+    let oscillator_nodes = oscillators.iter()
+        .map(|osc| {
+            let osc = osc.clone(); 
+            AudioNode::new(osc.clone(), Vec::new())
+        })
+        .collect();
+
+    let amplifier_node = AudioNode::new(amplifier.clone(), oscillator_nodes);
+
+    let audio_graph = AudioGraph::new(
+        sample_rate,
+
+    );
+
+    let synth = Arc::new(Mutex::new(
+        SynthesizerUI::new(
+            amplifier,
+            oscillators,
+        )
+    ));
 
     let audio_source = AudioSource::new(synth.clone());
 

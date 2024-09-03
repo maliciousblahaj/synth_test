@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use iced::widget::{column, component, container, text, Component};
 use iced::Element;
+use crate::audio::graph::AudioDevice;
 use crate::gui::widgets::core::normal::Normal;
 use crate::gui::widgets::core::normal_param::NormalParam;
 use crate::gui::widgets::core::range::LogDBRange;
@@ -14,8 +15,9 @@ pub enum AmplifierUIEvent {
     GainChanged(Normal),
 }
 
+#[derive(Clone, Debug)]
 pub struct AmplifierUI {
-    amplifier: Arc<Mutex<Box<Amplifier>>>,
+    amplifier: Arc<Mutex<Box<dyn AudioDevice>>>, //should be Amplifier, not dyn audiodevice but somehow that's impossible ;w;
 
     gain_range: LogDBRange,
     gain_param: NormalParam,

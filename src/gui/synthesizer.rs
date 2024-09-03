@@ -29,12 +29,12 @@ impl SynthesizerUI {
         }
     }
 
-    fn view(&self) -> Element<Message> {
+    pub fn view(&self) -> Element<Message> {
         let oscillators_ui: Vec<Element<Message>> = 
             self.oscillators_ui.iter()
-                .map(|ui| (ui.clone()).into()).collect();
+                .map(|ui| ui.to_owned().into()).collect();
         row![
-            self.amplifier_ui,
+            self.amplifier_ui.clone(),
             column(oscillators_ui),
 
         ].into()

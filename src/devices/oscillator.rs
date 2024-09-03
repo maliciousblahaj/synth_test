@@ -2,12 +2,11 @@ use std::{f32::consts::TAU, sync::Arc};
 
 use crate::{audio::graph::{AudioDevice, AudioNode}, synthesis::{waveforms::WaveForm, wavetable::WaveTable}};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WaveTableOscillator {
     active: bool,
     sample_rate: Arc<u32>,
     wavetable: WaveTable,
-    phase: f32,
     phase_increment: f32,
     amplitude: f32,
     frequency: f32,
@@ -20,7 +19,6 @@ impl WaveTableOscillator {
             active: false,
             sample_rate,
             wavetable,
-            phase: 0.0,
             phase_increment: 0.0,
             amplitude: 1.0,
             frequency: 0.0,
@@ -73,7 +71,7 @@ impl WaveTableOscillator {
 }
 
 impl AudioDevice for WaveTableOscillator {
-    fn render(&mut self, _children: &Vec<AudioNode>, time: u64) -> f32 {
+    fn render(&self, _children: &Vec<AudioNode>, time: u64) -> f32 {
         if !self.active {
             return 0.0; 
         }

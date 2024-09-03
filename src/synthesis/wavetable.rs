@@ -4,7 +4,7 @@ use crate::math::lerp;
 
 use super::waveforms::WaveForm;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct WaveTable {
     table: Vec<f32>,
     waveform: WaveForm,

@@ -1,6 +1,8 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, ops::DerefMut, panic::RefUnwindSafe, sync::{Arc, Mutex}, time::Duration};
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, fmt::Debug, ops::DerefMut, panic::RefUnwindSafe, sync::{Arc, Mutex}, time::Duration};
 use crate::{Error, Result, error::AudioError};
 use rodio::Source;
+
+//pub type AudioNodeBox = Box<AudioNode<dyn AudioDevice>>;
 
 
 
@@ -13,14 +15,14 @@ pub struct AudioGraph {
 
 impl AudioGraph {
     pub fn new(sample_rate: Arc<u32>) -> Self {
-        let master_node =
+        let mut master_node =
             AudioNode::new(
-                0,
                 Arc::new(Mutex::new(Box::new(MasterOutput::new()))),
                 Vec::new(),
             );
+        master_node.set_id(0);
         let mut nodes = HashMap::new();
-        nodes.insert(master_node.id, master_node.clone());
+        nodes.insert(master_node.id.unwrap_or(0), master_node.clone());
         Self {
             nodes,
             master_node,
@@ -66,23 +68,31 @@ impl Source for AudioGraph {
     }
 }
 
+pub struct SharedAudioDeviceState {
+
+}
+
 #[derive(Clone)]
 pub struct AudioNode {
-    id: u32,
-    device: Arc<Mutex<Box<dyn AudioDevice>>>,
+    device: Arc<Mutex<Box<dyn AudioDevice>>>, //dyn AudioDevice
     children: Vec<AudioNode>,
+    id: Option<u32>,
 }
 
 impl AudioNode {
-    pub fn new(id: u32, device: Arc<Mutex<Box<dyn AudioDevice>>>, children: Vec<AudioNode>) -> Self {
+    pub fn new(device: Arc<Mutex<Box<dyn AudioDevice>>>, children: Vec<AudioNode>) -> Self {
         Self {
-            id,
             device,
-            children
+            children,
+            id: None,
         }
     }
 
-    pub fn render(&mut self, time: u64) -> f32 {
+    fn set_id(&mut self, id: u32) {
+        self.id = Some(id);
+    }
+
+    pub fn render(&self, time: u64) -> f32 {
         self.device
             .lock()
             .unwrap()
@@ -90,8 +100,8 @@ impl AudioNode {
     }
 }
 
-pub trait AudioDevice {
-    fn render(&mut self, children: &Vec<AudioNode>, time: u64) -> f32;
+pub trait AudioDevice: Clone + Debug {
+    fn render(&self, children: &Vec<AudioNode>, time: u64) -> f32;
 }
 
 pub struct MasterOutput {
@@ -115,7 +125,7 @@ impl MasterOutput {
 }
 
 impl AudioDevice for MasterOutput {
-    fn render(&mut self, children: &Vec<AudioNode>, time: u64) -> f32 {
+    fn render(&self, children: &Vec<AudioNode>, time: u64) -> f32 {
         render_nodes(children, time) * self.amplitude
     }
 }
