@@ -1,23 +1,23 @@
-use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, fmt::Debug, ops::DerefMut, panic::RefUnwindSafe, sync::{Arc, Mutex}, time::Duration};
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap, fmt::Debug, ops::DerefMut, panic::RefUnwindSafe, rc::Rc, sync::{Arc, Mutex}, time::Duration};
 use crate::{Error, Result, error::AudioError};
 use rodio::Source;
 
 //pub type AudioNodeBox = Box<AudioNode<dyn AudioDevice>>;
 
 
-
 pub struct AudioGraph {
     nodes: HashMap<u32, AudioNode>,
     master_node: AudioNode,
-    sample_rate: Arc<u32>,
-    time: u64, //time in samples
+    sample_rate: u32,
+    //time: u64, //current time in samples
+    current_id: u32, //for getting a unique identifier to every node
 }
 
 impl AudioGraph {
-    pub fn new(sample_rate: Arc<u32>) -> Self {
+    pub fn new(sample_rate: u32) -> Self {
         let mut master_node =
             AudioNode::new(
-                Arc::new(Mutex::new(Box::new(MasterOutput::new()))),
+                Rc::new(Box::new(MasterOutput::new())),
                 Vec::new(),
             );
         master_node.set_id(0);
@@ -27,7 +27,8 @@ impl AudioGraph {
             nodes,
             master_node,
             sample_rate,
-            time: 0,
+            //time: 0,
+            current_id: 0,
         }
     }
 
@@ -38,8 +39,14 @@ impl AudioGraph {
     pub fn get_node(&self, id: u32) -> Result<&AudioNode> {
         self.nodes.get(&id).ok_or(Error::Audio(AudioError::AudioGraphInvalidId(id)))
     }
+
+    pub fn get_uid(&mut self) -> u32 {
+        self.current_id += 1;
+        self.current_id
+    }
 }
 
+/*
 impl Iterator for AudioGraph {
     type Item = f32;
 
@@ -56,7 +63,7 @@ impl Source for AudioGraph {
     }
     
     fn sample_rate(&self) -> u32 {
-        (*self.sample_rate).clone()
+        self.sample_rate
     }
 
     fn current_frame_len(&self) -> Option<usize> {
@@ -67,20 +74,17 @@ impl Source for AudioGraph {
         None
     }
 }
-
-pub struct SharedAudioDeviceState {
-
-}
+*/
 
 #[derive(Clone)]
 pub struct AudioNode {
-    device: Arc<Mutex<Box<dyn AudioDevice>>>, //dyn AudioDevice
+    device: Rc<Box<dyn AudioDevice>>, //dyn AudioDevice
     children: Vec<AudioNode>,
     id: Option<u32>,
 }
 
 impl AudioNode {
-    pub fn new(device: Arc<Mutex<Box<dyn AudioDevice>>>, children: Vec<AudioNode>) -> Self {
+    pub fn new(device: Rc<Box<dyn AudioDevice>>, children: Vec<AudioNode>) -> Self {
         Self {
             device,
             children,
@@ -93,14 +97,11 @@ impl AudioNode {
     }
 
     pub fn render(&self, time: u64) -> f32 {
-        self.device
-            .lock()
-            .unwrap()
-            .render(&self.children, time)
+        self.device.render(&self.children, time)
     }
 }
 
-pub trait AudioDevice: Clone + Debug {
+pub trait AudioDevice {
     fn render(&self, children: &Vec<AudioNode>, time: u64) -> f32;
 }
 
